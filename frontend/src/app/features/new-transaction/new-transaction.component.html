@@ -93,41 +93,44 @@
     <table class="items-table">
       <thead>
         <tr>
-          <th>Item / Article</th><th>Gross Wt (g)</th><th>Stone Wt (g)</th><th>Other Wt (g)</th>
+          <th style="width:34px">#</th>
+          <th>Item / Article <span class="req">*</span></th><th>Gross Wt (g) <span class="req">*</span></th><th>Stone Wt (g)</th><th>Other Wt (g)</th>
           <th>Net Wt (g)</th><th>Purity (%)</th><th>{{ metal === 'gold' ? '24crt' : '999' }} Rate/g</th><th>Amount</th><th></th>
         </tr>
       </thead>
       <tbody>
         @for (it of items(); track $index) {
           <tr>
-            <td><input [(ngModel)]="it.article" placeholder="article"></td>
-            <td><input class="i_gross" type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.gross"></td>
+            <td class="center muted">{{ $index + 1 }}</td>
+            <td><input [id]="'i_article_' + $index" class="i_article" [(ngModel)]="it.article" placeholder="e.g. NECKLACE"></td>
+            <td><input [id]="'i_gross_' + $index" class="i_gross" type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.gross"></td>
             <td><input type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.stone"></td>
             <td><input type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.other"></td>
             <td>{{ net(it).toFixed(2) }}</td>
             <td><input type="number" min="0" max="100" step="0.01" style="width:75px" [(ngModel)]="it.purity"></td>
-            <td><input class="i_rate" type="number" min="0" step="0.01" style="width:95px" [(ngModel)]="it.rate"></td>
+            <td><input [id]="'i_rate_' + $index" class="i_rate" type="number" min="0" step="0.01" style="width:95px" [(ngModel)]="it.rate"></td>
             <td class="right">{{ inr2(amount(it)) }}</td>
-            <td><button type="button" class="btn btn-sm btn-ghost" (click)="removeItem($index)"><i class="fa-solid fa-trash"></i></button></td>
+            <td><button type="button" class="btn btn-sm btn-ghost" [disabled]="items().length === 1"
+                  [title]="items().length === 1 ? 'At least one item is required' : 'Remove this item'"
+                  (click)="removeItem($index)"><i class="fa-solid fa-trash"></i></button></td>
           </tr>
         }
       </tbody>
     </table>
   </div>
-  <button type="button" class="btn btn-sm btn-ghost" style="margin-top:10px" (click)="addItem()"><i class="fa-solid fa-plus"></i> Add item</button>
-  <p class="hintline">Rate is pre-filled from the admin-set {{ metal }} rate ({{ fixedRate ? inr0(fixedRate) + '/g' : 'not set' }}) and can be edited manually per item.</p>
+  <div class="row" style="justify-content:space-between;margin-top:10px;align-items:center">
+    <button type="button" class="btn btn-sm btn-ghost" (click)="addItem(true)"><i class="fa-solid fa-plus"></i> Add item</button>
+    <span class="hintline">{{ items().length }} item{{ items().length === 1 ? '' : 's' }} · net {{ totals().netWeight.toFixed(2) }} g</span>
+  </div>
+  <p class="hintline">Each item needs its own name &amp; gross weight. Rate is pre-filled from the admin-set {{ metal }} rate ({{ fixedRate ? inr0(fixedRate) + '/g' : 'not set' }}) and can be edited per item.</p>
 </div>
 
 <!-- Charges + totals -->
 <div class="card">
   <h3><i class="fa-solid fa-receipt"></i> Charges &amp; Total</h3>
   <div class="grid grid-2" style="max-width:520px">
-    <div class="field"><label>Item / Article name <span class="req">*</span></label><input id="t_article" placeholder="e.g. NECKLACE" [(ngModel)]="article"></div>
     <div class="field"><label>Margin (₹ deducted)</label><input type="number" min="0" [(ngModel)]="margin"></div>
-  </div>
-  <div class="grid grid-2" style="max-width:520px">
     <div class="field"><label>Billing Charges (₹ deducted)</label><input type="number" min="0" [(ngModel)]="charges"></div>
-    <div></div>
   </div>
   <div class="totbox" style="margin-top:14px">
     <div class="line"><span>Gross Amount</span><b>{{ inr2(totals().grossAmount) }}</b></div>

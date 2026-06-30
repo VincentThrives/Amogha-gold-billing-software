@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { LoginComponent } from './login.component';
 import { AuthService } from '../../core/services/auth.service';
@@ -73,5 +73,43 @@ describe('LoginComponent', () => {
     await cmp.verify();
     expect(cmp.error()).toContain('Incorrect OTP');
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('LoginComponent field highlight', () => {
+  let fixture: ComponentFixture<LoginComponent>;
+  let cmp: LoginComponent;
+  let auth: jasmine.SpyObj<AuthService>;
+
+  beforeEach(() => {
+    auth = jasmine.createSpyObj('AuthService', ['requestOtp', 'verifyOtp']);
+    TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        { provide: AuthService, useValue: auth },
+        { provide: StoreService, useValue: jasmine.createSpyObj('StoreService', ['sync']) },
+        { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
+      ],
+    });
+    fixture = TestBed.createComponent(LoginComponent);
+    cmp = fixture.componentInstance;
+    document.body.appendChild(fixture.nativeElement); // so getElementById resolves
+    fixture.detectChanges();
+  });
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('highlights the phone field on an invalid number', async () => {
+    cmp.phone = '123';
+    await cmp.sendOtp();
+    expect(document.getElementById('login_phone')!.classList.contains('input-err')).toBeTrue();
+  });
+
+  it('highlights the OTP field when verification fails', async () => {
+    cmp.step.set(2);
+    fixture.detectChanges();
+    cmp.otp = '000000';
+    auth.verifyOtp.and.rejectWith({ error: { error: 'Incorrect OTP. Please try again.' } });
+    await cmp.verify();
+    expect(document.getElementById('login_otp')!.classList.contains('input-err')).toBeTrue();
   });
 });

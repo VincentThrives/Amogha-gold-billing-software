@@ -65,7 +65,7 @@
 
   <div class="card" style="max-width:480px">
     <h3>Request Funds</h3>
-    <div class="field"><label>Amount (₹)</label><input type="number" min="1" placeholder="e.g. 100000" [(ngModel)]="amount"></div>
+    <div class="field"><label>Amount (₹)</label><input id="fr_amt" type="number" min="1" placeholder="e.g. 100000" [(ngModel)]="amount"></div>
     <div class="field"><label>Note (optional)</label><input placeholder="reason / shift" [(ngModel)]="note"></div>
     <button class="btn btn-gold btn-block" [disabled]="busy()" (click)="request()">Send Request to Admin</button>
     <p class="hintline">You can only bill customers up to your available approved balance.</p>

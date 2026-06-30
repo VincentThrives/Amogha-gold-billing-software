@@ -6,6 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { StoreService } from '../../core/services/store.service';
 import { Role } from '../../core/models';
 import { digitsOnly } from '../../core/calc';
+import { highlightField } from '../../core/ui';
 
 @Component({
   selector: 'app-login',
@@ -33,7 +34,7 @@ export class LoginComponent {
   onOtp(v: string) { this.otp = digitsOnly(v, 6); }
 
   async sendOtp() {
-    if (!/^\d{10}$/.test(this.phone)) { this.hint.set('Enter a valid 10-digit mobile number.'); return; }
+    if (!/^\d{10}$/.test(this.phone)) { this.hint.set('Enter a valid 10-digit mobile number.'); highlightField(document.getElementById('login_phone')); return; }
     this.busy.set(true); this.hint.set('Sending OTP…');
     try {
       const r = await this.auth.requestOtp(this.phone, this.role());
@@ -54,6 +55,7 @@ export class LoginComponent {
       this.router.navigate(['/dashboard']);
     } catch (e: any) {
       this.error.set(e?.error?.error || 'Incorrect OTP. Please try again.');
+      highlightField(document.getElementById('login_otp'));
     } finally { this.busy.set(false); }
   }
 

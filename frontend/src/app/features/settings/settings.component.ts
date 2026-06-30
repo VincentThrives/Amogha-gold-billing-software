@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
 import { digitsOnly } from '../../core/calc';
+import { highlightField } from '../../core/ui';
 
 @Component({
   selector: 'app-settings',
@@ -48,7 +49,16 @@ export class SettingsComponent {
   }
 
   async addEmployee() {
-    if (!this.empName.trim() || !/^\d{10}$/.test(this.empPhone)) { this.toast.err('Enter name and valid 10-digit phone.'); return; }
+    if (!this.empName.trim()) {
+      this.toast.err('Enter the employee name.');
+      highlightField(document.getElementById('emp_name'));
+      return;
+    }
+    if (!/^\d{10}$/.test(this.empPhone)) {
+      this.toast.err('Enter a valid 10-digit phone.');
+      highlightField(document.getElementById('emp_phone'));
+      return;
+    }
     try {
       await this.store.addEmployee(this.empName.trim(), this.empPhone);
       this.toast.ok('Employee added.');

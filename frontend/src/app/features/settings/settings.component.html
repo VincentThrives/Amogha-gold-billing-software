@@ -23,8 +23,8 @@
     </tbody>
   </table></div>
   <div class="row" style="margin-top:12px">
-    <input placeholder="Name" style="flex:1" [(ngModel)]="empName">
-    <input placeholder="10-digit phone" inputmode="numeric" maxlength="10" style="flex:1" [ngModel]="empPhone" (ngModelChange)="onEmpPhone($event)">
+    <input id="emp_name" placeholder="Name" style="flex:1" [(ngModel)]="empName">
+    <input id="emp_phone" placeholder="10-digit phone" inputmode="numeric" maxlength="10" style="flex:1" [ngModel]="empPhone" (ngModelChange)="onEmpPhone($event)">
     <button class="btn btn-purple" (click)="addEmployee()">Add Employee</button>
   </div>
 </div>

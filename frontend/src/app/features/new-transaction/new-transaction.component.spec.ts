@@ -45,9 +45,9 @@ describe('NewTransactionComponent', () => {
     cmp.selectedIds = new Set(['PAN Card']);
     cmp.idNumbers = { 'PAN Card': 'ABCDE1234F' };
     cmp.name = 'PRIYANKA RAJ'; cmp.phone = '9665870336';
-    cmp.addr1 = '2092 Sobha Daisy'; cmp.pin = '560103'; cmp.article = 'NECKLACE';
+    cmp.addr1 = '2092 Sobha Daisy'; cmp.pin = '560103';
     const row = cmp.items()[0];
-    row.gross = 55.11; row.purity = 90; row.rate = 8530;
+    row.article = 'NECKLACE'; row.gross = 55.11; row.purity = 90; row.rate = 8530;
     cmp.margin = 79; cmp.charges = 100;
   }
 
@@ -91,10 +91,18 @@ describe('NewTransactionComponent', () => {
     expect(toast.err).toHaveBeenCalledWith('Enter a valid 6-digit PIN code.');
   });
 
-  it('blocks submit when the article name is missing', async () => {
-    fillValid(); cmp.article = '';
+  it('blocks submit when a row article name is missing', async () => {
+    fillValid(); cmp.items()[0].article = '';
     await cmp.submit();
-    expect(toast.err).toHaveBeenCalledWith('Enter the item / article name.');
+    expect(toast.err).toHaveBeenCalledWith('Enter the article name for item 1.');
+    expect(addTxn).not.toHaveBeenCalled();
+  });
+
+  it('blocks submit when no row has a gross weight', async () => {
+    fillValid(); cmp.items()[0].gross = null;
+    await cmp.submit();
+    expect(toast.err).toHaveBeenCalledWith('Add at least one item with its gross weight.');
+    expect(addTxn).not.toHaveBeenCalled();
   });
 
   it('blocks an employee with insufficient funds', async () => {
@@ -113,16 +121,29 @@ describe('NewTransactionComponent', () => {
     const sent = addTxn.calls.mostRecent().args[0] as Txn;
     expect(sent.totals.amountPayable).toBe(422900);
     expect(sent.idProofs).toEqual([{ type: 'PAN Card', number: 'ABCDE1234F' }]);
+    expect(sent.items[0].article).toBe('NECKLACE');
+    expect(sent.article).toBe('NECKLACE');
     expect(router.navigate).toHaveBeenCalledWith(['/invoice', 'txn-1']);
   });
 
-  it('addItem / removeItem manage rows (min one)', () => {
+  it('addItem / removeItem manage rows (min one, no error at one row)', () => {
     cmp.addItem();
     expect(cmp.items().length).toBe(2);
     cmp.removeItem(0);
     expect(cmp.items().length).toBe(1);
-    cmp.removeItem(0); // cannot remove the last
+    cmp.removeItem(0); // guarded — cannot remove the last, and does not error
     expect(cmp.items().length).toBe(1);
-    expect(toast.err).toHaveBeenCalledWith('At least one item is required.');
+    expect(toast.err).not.toHaveBeenCalled();
+  });
+
+  it('highlights the offending row cell in the rendered form (article)', async () => {
+    const f = TestBed.createComponent(NewTransactionComponent);
+    cmp = f.componentInstance;
+    document.body.appendChild(f.nativeElement);
+    f.detectChanges();                    // render the real template (row ids present)
+    fillValid(); cmp.items()[0].article = ''; // everything valid except the row's article
+    await cmp.submit();
+    expect(document.getElementById('i_article_0')!.classList.contains('input-err')).toBeTrue();
+    f.nativeElement.remove();
   });
 });

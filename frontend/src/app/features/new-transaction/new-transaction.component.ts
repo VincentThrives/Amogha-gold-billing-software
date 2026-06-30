@@ -43,7 +43,7 @@ export class NewTransactionComponent implements OnInit {
 
   // items + charges
   items = signal<ItemRow[]>([]);
-  article = ''; margin = 0; charges = 0;
+  margin = 0; charges = 0;
   busy = signal(false);
 
   inr2 = (n: number) => inr(n, 2);
@@ -86,9 +86,18 @@ export class NewTransactionComponent implements OnInit {
   }
   verifyClientOtp() { this.clientOtpVerified.set(this.clientOtpInput.trim() === this.clientOtp()); }
 
-  addItem() { this.items.update(list => [...list, { article: '', gross: null, stone: 0, other: 0, purity: 91.6, rate: this.fixedRate || 0 }]); }
+  addItem(focusNew = false) {
+    this.items.update(list => [...list, { article: '', gross: null, stone: 0, other: 0, purity: 91.6, rate: this.fixedRate || 0 }]);
+    if (focusNew) {
+      const idx = this.items().length - 1;
+      setTimeout(() => {
+        const el = document.getElementById('i_article_' + idx);
+        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); (el as HTMLElement).focus(); }
+      });
+    }
+  }
   removeItem(i: number) {
-    if (this.items().length <= 1) { this.toast.err('At least one item is required.'); return; }
+    if (this.items().length <= 1) return;   // button is disabled at one row; guard anyway
     this.items.update(list => list.filter((_, idx) => idx !== i));
   }
   net(it: ItemRow) { return netWeight(it.gross || 0, it.stone, it.other); }
@@ -107,6 +116,13 @@ export class NewTransactionComponent implements OnInit {
     return false;
   }
 
+  // highlight a specific cell in a specific item row (article/gross/rate)
+  private failRow(msg: string, field: 'i_article' | 'i_gross' | 'i_rate', idx: number): false {
+    this.toast.err(msg);
+    highlightField(document.getElementById(`${field}_${idx}`));
+    return false;
+  }
+
   async submit() {
     const idProofs: IdProof[] = this.selectedIdList
       .map(t => ({ type: t, number: (this.idNumbers[t] || '').trim() }))
@@ -118,14 +134,20 @@ export class NewTransactionComponent implements OnInit {
     if (!/^\d{10}$/.test(this.phone)) return this.fail('Enter a valid 10-digit seller phone.', '#f_phone');
     if (!this.addr1.trim()) return this.fail('Seller address is required.', '#f_addr1');
     if (!/^\d{6}$/.test(this.pin)) return this.fail('Enter a valid 6-digit PIN code.', '#f_pin');
-    if (!this.article.trim()) return this.fail('Enter the item / article name.', '#t_article');
 
-    const items = this.items().filter(it => (it.gross || 0) > 0);
-    if (!items.length) return this.fail('Add at least one item with gross weight.', '.i_gross');
-    if (items.some(it => !it.rate)) return this.fail(`Every item needs a rate. Set the ${this.metal} rate first.`, '.i_rate');
+    // items: keep rows that have a gross weight; each such row needs a name and a rate
+    const rows = this.items()
+      .map((it, idx) => ({ it, idx }))
+      .filter(r => (r.it.gross || 0) > 0);
+    if (!rows.length) return this.failRow('Add at least one item with its gross weight.', 'i_gross', 0);
+    for (const { it, idx } of rows) {
+      if (!it.article.trim()) return this.failRow(`Enter the article name for item ${idx + 1}.`, 'i_article', idx);
+      if (!it.rate) return this.failRow(`Item ${idx + 1} needs a rate. Set the ${this.metal} rate first.`, 'i_rate', idx);
+    }
+    const items = rows.map(r => r.it);
 
     const tot = this.totals();
-    if (tot.amountPayable <= 0) return this.fail('Amount payable must be greater than zero.', '.i_gross');
+    if (tot.amountPayable <= 0) return this.failRow('Amount payable must be greater than zero.', 'i_gross', rows[0].idx);
 
     const me = this.store.me()!;
     if (me.role === 'employee' && this.store.balanceOf(me.id) < tot.amountPayable) {
@@ -149,10 +171,10 @@ export class NewTransactionComponent implements OnInit {
       reference: { number: this.refNumber.trim(), relationship: this.refRel.trim(), phone: this.refPhone.trim(), address: this.refAddr.trim() },
       selfie: this.selfie,
       clientOtpVerified: this.clientOtpVerified(),
-      article: this.article.trim(),
+      article: items[0].article.trim(),
       items: items.map(it => {
         const net = netWeight(it.gross || 0, it.stone, it.other);
-        return { article: it.article.trim() || this.article.trim(), gross: it.gross || 0, stone: it.stone, other: it.other, net, purity: it.purity, rate: it.rate, amount: itemAmount(net, it.rate, it.purity) };
+        return { article: it.article.trim(), gross: it.gross || 0, stone: it.stone, other: it.other, net, purity: it.purity, rate: it.rate, amount: itemAmount(net, it.rate, it.purity) };
       }),
       totals: {
         grossAmount: tot.grossAmount, margin: tot.margin, netAmount: tot.netAmount,

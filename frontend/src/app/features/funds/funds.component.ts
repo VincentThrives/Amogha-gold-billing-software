@@ -5,6 +5,7 @@ import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
 import { FundRequest, User } from '../../core/models';
 import { inr, billDate } from '../../core/calc';
+import { highlightField } from '../../core/ui';
 
 @Component({
   selector: 'app-funds',
@@ -30,7 +31,7 @@ export class FundsComponent {
 
   async request() {
     const amt = Number(this.amount) || 0;
-    if (amt <= 0) { this.toast.err('Enter a valid amount.'); return; }
+    if (amt <= 0) { this.toast.err('Enter a valid amount.'); highlightField(document.getElementById('fr_amt')); return; }
     this.busy.set(true);
     try {
       await this.store.addFundRequest(amt, this.note.trim());
