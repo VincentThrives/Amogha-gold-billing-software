@@ -1,0 +1,15 @@
+.login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  background:radial-gradient(1200px 600px at 50% -10%,#fff7e6,transparent),linear-gradient(160deg,#fbf6ec,#f1e7d3)}
+.login-card{background:var(--card);width:min(400px,92vw);padding:30px 28px;border-radius:18px;box-shadow:var(--shadow);text-align:center;border-top:5px solid var(--gold)}
+.login-logo{width:120px;height:auto;margin-bottom:6px}
+.login-card h1{font-size:19px;margin:4px 0 2px;color:var(--purple)}
+.login-sub{color:var(--muted);margin:0 0 14px;font-size:12.5px}
+.login-card label{text-align:left}
+.role-toggle{display:flex;gap:8px;background:#f3ecdc;padding:5px;border-radius:11px;margin-bottom:6px}
+.role-btn{flex:1;border:0;background:transparent;padding:9px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;color:var(--muted)}
+.role-btn.active{background:#fff;color:var(--purple);box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.login-hint{font-size:12px;color:var(--muted);margin-top:10px;min-height:16px}
+.login-hint.err,.err{color:var(--err)}
+.login-foot{font-size:12px;color:var(--muted)}
+.otp-note{font-size:13px;margin:4px 0}
+.otp-display{font-size:26px;font-weight:700;letter-spacing:6px;color:var(--purple);background:#f3ecdc;border-radius:10px;padding:10px;margin:6px 0 4px}

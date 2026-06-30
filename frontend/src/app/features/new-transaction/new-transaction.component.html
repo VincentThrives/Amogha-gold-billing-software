@@ -1,0 +1,144 @@
+<div class="page-head">
+  <div><h2>New {{ cap(metal) }} Transaction</h2><p>Fill seller KYC and item details, then generate the bill</p></div>
+  <a routerLink="/new" class="btn btn-ghost">&larr; Back</a>
+</div>
+
+<!-- ID proof -->
+<div class="card">
+  <h3><i class="fa-solid fa-id-card"></i> ID Proof <span class="req">*</span>
+    <small class="muted">(select at least one; add more if available)</small></h3>
+  <div class="chk-grid" id="idTypes">
+    @for (t of ID_TYPES; track t) {
+      <label class="chk" [class.on]="selectedIds.has(t)">
+        <input type="checkbox" [checked]="selectedIds.has(t)" (change)="toggleId(t)"> {{ t }}
+      </label>
+    }
+  </div>
+  @if (selectedIdList.length) {
+    <div class="grid grid-2" style="margin-top:12px">
+      @for (t of selectedIdList; track t) {
+        <div class="field">
+          <label>{{ t }} Number</label>
+          <input class="id-number-input" [placeholder]="t + ' document no.'" [(ngModel)]="idNumbers[t]">
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Seller -->
+<div class="card">
+  <h3><i class="fa-solid fa-user"></i> {{ cap(metal) }} Seller Details</h3>
+  <div class="grid grid-3">
+    <div class="field"><label>Full Name <span class="req">*</span></label><input id="f_name" [(ngModel)]="name"></div>
+    <div class="field"><label>Date of Birth</label><input id="f_dob" type="date" [(ngModel)]="dob"></div>
+    <div class="field"><label>Phone Number <span class="req">*</span></label>
+      <input id="f_phone" inputmode="numeric" maxlength="10" placeholder="10-digit" [ngModel]="phone" (ngModelChange)="onDigits('phone', $event)"></div>
+  </div>
+  <div class="grid grid-2">
+    <div class="field"><label>Address <span class="req">*</span></label><textarea id="f_addr1" [(ngModel)]="addr1"></textarea></div>
+    <div class="field"><label>Address line 2 (optional)</label><textarea id="f_addr2" [(ngModel)]="addr2"></textarea></div>
+  </div>
+  <div class="grid grid-2">
+    <div class="field"><label>PIN Code <span class="req">*</span></label>
+      <input id="f_pin" inputmode="numeric" maxlength="6" [ngModel]="pin" (ngModelChange)="onDigits('pin', $event)"></div>
+    <div class="field"><label>Landmark</label><input id="f_landmark" [(ngModel)]="landmark"></div>
+  </div>
+</div>
+
+<!-- Reference -->
+<div class="card">
+  <h3><i class="fa-solid fa-people-arrows"></i> Reference Details</h3>
+  <div class="grid grid-4">
+    <div class="field"><label>Reference Number</label><input [(ngModel)]="refNumber"></div>
+    <div class="field"><label>Relationship</label><input placeholder="e.g. Brother" [(ngModel)]="refRel"></div>
+    <div class="field"><label>Reference Phone</label>
+      <input inputmode="numeric" maxlength="10" [ngModel]="refPhone" (ngModelChange)="onDigits('refPhone', $event)"></div>
+    <div class="field"><label>Reference Address</label><input [(ngModel)]="refAddr"></div>
+  </div>
+</div>
+
+<!-- Selfie + OTP -->
+<div class="card">
+  <h3><i class="fa-solid fa-camera"></i> Selfie &amp; Verification <small class="muted">(both optional)</small></h3>
+  <div class="row" style="align-items:flex-start">
+    <div>
+      <label>Seller selfie photo (optional)</label>
+      <input type="file" accept="image/*" capture="user" style="max-width:260px" (change)="onSelfie($event)">
+      @if (selfie) { <div style="margin-top:8px"><img [src]="selfie" class="selfie-prev"></div> }
+    </div>
+    <div style="min-width:240px">
+      <label>Client OTP verification (optional)</label>
+      <div class="row">
+        <button type="button" class="btn btn-sm btn-ghost" (click)="genClientOtp()">Generate OTP</button>
+        @if (clientOtp()) { <span class="muted" style="font-size:13px">OTP: {{ clientOtp() }}</span> }
+      </div>
+      @if (clientOtp()) {
+        <div class="row" style="margin-top:8px">
+          <input placeholder="Enter OTP" style="max-width:140px" inputmode="numeric" maxlength="6" [(ngModel)]="clientOtpInput">
+          <button type="button" class="btn btn-sm btn-purple" (click)="verifyClientOtp()">Verify</button>
+          @if (clientOtpVerified()) { <span class="badge approved">verified</span> }
+          @else if (clientOtpInput) { <span class="badge rejected">not verified</span> }
+        </div>
+      }
+      <p class="hintline">If the seller agrees, generate &amp; verify. If they decline, leave it &mdash; it is not mandatory.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Items -->
+<div class="card">
+  <h3><i class="fa-solid fa-scale-balanced"></i> Item Details</h3>
+  <div class="table-wrap">
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>Item / Article</th><th>Gross Wt (g)</th><th>Stone Wt (g)</th><th>Other Wt (g)</th>
+          <th>Net Wt (g)</th><th>Purity (%)</th><th>{{ metal === 'gold' ? '24crt' : '999' }} Rate/g</th><th>Amount</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (it of items(); track $index) {
+          <tr>
+            <td><input [(ngModel)]="it.article" placeholder="article"></td>
+            <td><input class="i_gross" type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.gross"></td>
+            <td><input type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.stone"></td>
+            <td><input type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.other"></td>
+            <td>{{ net(it).toFixed(2) }}</td>
+            <td><input type="number" min="0" max="100" step="0.01" style="width:75px" [(ngModel)]="it.purity"></td>
+            <td><input class="i_rate" type="number" min="0" step="0.01" style="width:95px" [(ngModel)]="it.rate"></td>
+            <td class="right">{{ inr2(amount(it)) }}</td>
+            <td><button type="button" class="btn btn-sm btn-ghost" (click)="removeItem($index)"><i class="fa-solid fa-trash"></i></button></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <button type="button" class="btn btn-sm btn-ghost" style="margin-top:10px" (click)="addItem()"><i class="fa-solid fa-plus"></i> Add item</button>
+  <p class="hintline">Rate is pre-filled from the admin-set {{ metal }} rate ({{ fixedRate ? inr0(fixedRate) + '/g' : 'not set' }}) and can be edited manually per item.</p>
+</div>
+
+<!-- Charges + totals -->
+<div class="card">
+  <h3><i class="fa-solid fa-receipt"></i> Charges &amp; Total</h3>
+  <div class="grid grid-2" style="max-width:520px">
+    <div class="field"><label>Item / Article name <span class="req">*</span></label><input id="t_article" placeholder="e.g. NECKLACE" [(ngModel)]="article"></div>
+    <div class="field"><label>Margin (₹ deducted)</label><input type="number" min="0" [(ngModel)]="margin"></div>
+  </div>
+  <div class="grid grid-2" style="max-width:520px">
+    <div class="field"><label>Billing Charges (₹ deducted)</label><input type="number" min="0" [(ngModel)]="charges"></div>
+    <div></div>
+  </div>
+  <div class="totbox" style="margin-top:14px">
+    <div class="line"><span>Gross Amount</span><b>{{ inr2(totals().grossAmount) }}</b></div>
+    <div class="line"><span>Margin</span><b>{{ inr2(totals().margin) }}</b></div>
+    <div class="line"><span>Net Amount</span><b>{{ inr2(totals().netAmount) }}</b></div>
+    <div class="line"><span>Billing Charges</span><b>{{ inr2(totals().billingCharges) }}</b></div>
+    <div class="line big"><span>Amount Payable</span><b>{{ inr0(totals().amountPayableRounded) }}</b></div>
+  </div>
+</div>
+
+<div class="row" style="justify-content:flex-end">
+  <a routerLink="/new" class="btn btn-ghost">Cancel</a>
+  <button class="btn btn-gold" [disabled]="busy()" (click)="submit()"><i class="fa-solid fa-file-invoice-dollar"></i> Generate Bill</button>
+</div>

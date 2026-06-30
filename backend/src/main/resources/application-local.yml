@@ -1,0 +1,7 @@
+# Zero-setup local run: starts an in-process MongoDB (flapdoodle).
+# Activate with:  SPRING_PROFILES_ACTIVE=local  (or --spring.profiles.active=local)
+de:
+  flapdoodle:
+    mongodb:
+      embedded:
+        version: 7.0.4

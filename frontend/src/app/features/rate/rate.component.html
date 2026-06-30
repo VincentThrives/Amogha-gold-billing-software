@@ -1,0 +1,30 @@
+<div class="page-head">
+  <div><h2>Gold / Silver Rate</h2>
+    <p>{{ store.isAdmin() ? 'Set the daily rate used as the fixed price while billing' : 'Current rates (only admin can change)' }}</p></div>
+</div>
+
+<div class="grid grid-2" style="max-width:640px">
+  <div class="card">
+    <h3><i class="fa-solid fa-coins"></i> Gold Rate (per gram)</h3>
+    @if (store.isAdmin()) {
+      <div class="field"><label>₹ per gram</label><input type="number" min="0" step="0.01" [(ngModel)]="gold"></div>
+    } @else {
+      <div class="val" style="font-size:23px;font-weight:700;color:var(--purple)">{{ store.rates().gold ? inr0(store.rates().gold) + '/g' : 'not set' }}</div>
+    }
+  </div>
+  <div class="card">
+    <h3><i class="fa-solid fa-coins"></i> Silver Rate (per gram)</h3>
+    @if (store.isAdmin()) {
+      <div class="field"><label>₹ per gram</label><input type="number" min="0" step="0.01" [(ngModel)]="silver"></div>
+      <button class="btn btn-gold btn-block" style="margin-top:14px" [disabled]="busy()" (click)="save()">Save Rates</button>
+    } @else {
+      <div class="val" style="font-size:23px;font-weight:700;color:var(--purple)">{{ store.rates().silver ? inr0(store.rates().silver) + '/g' : 'not set' }}</div>
+    }
+  </div>
+</div>
+
+<p class="muted" style="margin-top:6px">
+  @if (store.rates().updatedAt) {
+    Last updated {{ date(store.rates().updatedAt!) }}@if (updatedByName()) { by {{ updatedByName() }} }
+  } @else { Not set yet }
+</p>

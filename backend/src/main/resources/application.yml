@@ -1,0 +1,33 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: amogha-billing
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/amogha_billing}
+      database: ${MONGODB_DB:amogha_billing}
+      auto-index-creation: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:amogha-dev-secret-change-me-this-must-be-at-least-256-bits-long-value-x}
+    ttl-minutes: 720
+  otp:
+    ttl-minutes: 5
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
+  web:
+    # Built Angular app (produced by `npm run build` in ../frontend). Served when present.
+    static-dir: ${STATIC_DIR:../frontend/dist/amogha-billing/browser}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

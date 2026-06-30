@@ -1,0 +1,31 @@
+<div class="login-wrap">
+  <div class="login-card">
+    <img src="logo.png" alt="Amogha Gold Company" class="login-logo">
+    <h1>Amogha Gold Company</h1>
+    <p class="login-sub">Billing &amp; Transaction System</p>
+
+    @if (step() === 1) {
+      <div class="role-toggle">
+        <button type="button" class="role-btn" [class.active]="role() === 'admin'" (click)="role.set('admin')">
+          <i class="fa-solid fa-user-shield"></i> Admin</button>
+        <button type="button" class="role-btn" [class.active]="role() === 'employee'" (click)="role.set('employee')">
+          <i class="fa-solid fa-user"></i> Employee</button>
+      </div>
+      <label>Registered Mobile Number</label>
+      <input type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9999900001"
+             [ngModel]="phone" (ngModelChange)="onPhone($event)" (keydown.enter)="sendOtp()">
+      <button class="btn btn-gold btn-block" [disabled]="busy()" (click)="sendOtp()">Send OTP</button>
+      <p class="login-hint">{{ hint() }}</p>
+    } @else {
+      <p class="otp-note">An OTP has been generated for <b>{{ generatedFor() }}</b>.</p>
+      <div class="otp-display">{{ shownOtp() }}</div>
+      <label>Enter OTP</label>
+      <input type="text" inputmode="numeric" maxlength="6" placeholder="6-digit OTP"
+             [ngModel]="otp" (ngModelChange)="onOtp($event)" (keydown.enter)="verify()">
+      <button class="btn btn-gold btn-block" [disabled]="busy()" (click)="verify()">Verify &amp; Login</button>
+      <button class="btn btn-link" (click)="back()">&larr; Change number</button>
+      <p class="login-hint err">{{ error() }}</p>
+    }
+  </div>
+  <p class="login-foot">Demo accounts &mdash; Admin: <b>9999900001</b> &nbsp;|&nbsp; Employee: <b>9999900002</b></p>
+</div>

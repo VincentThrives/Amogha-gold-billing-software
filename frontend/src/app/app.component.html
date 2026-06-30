@@ -1,0 +1,5 @@
+<router-outlet></router-outlet>
+
+@if (toast.current(); as t) {
+  <div class="toast" [class.ok]="t.type === 'ok'" [class.err]="t.type === 'err'">{{ t.text }}</div>
+}

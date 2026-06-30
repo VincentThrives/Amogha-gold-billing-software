@@ -1,0 +1,21 @@
+# Render Blueprint — builds the Angular frontend + Spring Boot API in one Docker image
+# (the API serves the built frontend). In Render: New + → Blueprint → connect the repo,
+# then paste your MongoDB Atlas connection string when prompted.
+services:
+  - type: web
+    name: amogha-billing
+    runtime: docker
+    plan: free
+    rootDir: amogha-billing
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false            # paste your MongoDB Atlas connection string in the dashboard
+      - key: MONGODB_DB
+        value: amogha_billing
+      - key: JWT_SECRET
+        generateValue: true    # Render generates a strong random secret (≥256 bits)
+      - key: STATIC_DIR
+        value: classpath:/static

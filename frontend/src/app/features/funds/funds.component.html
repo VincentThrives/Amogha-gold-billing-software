@@ -1,0 +1,91 @@
+@if (store.isAdmin()) {
+  <!-- ADMIN -->
+  <div class="page-head"><div><h2>Add Funds — Approvals</h2><p>Approve or reject employee fund requests</p></div></div>
+
+  <div class="card">
+    <h3>Pending Requests ({{ pending().length }})</h3>
+    @if (!pending().length) { <div class="empty"><i class="fa-solid fa-wallet"></i>No pending requests.</div> }
+    @else {
+      <div class="table-wrap"><table>
+        <thead><tr><th>Employee</th><th>Amount</th><th>Note</th><th>Requested</th><th></th></tr></thead>
+        <tbody>
+          @for (f of pending(); track f.id) {
+            <tr>
+              <td>{{ empName(f.employeeId) }}</td><td><b>{{ inr0(f.amount) }}</b></td>
+              <td>{{ f.note || '—' }}</td><td>{{ date(f.requestedAt) }}</td>
+              <td class="right">
+                <button class="btn btn-sm btn-ok" (click)="decide(f, true)">Approve</button>
+                <button class="btn btn-sm btn-err" (click)="decide(f, false)">Reject</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table></div>
+    }
+  </div>
+
+  <div class="card">
+    <h3>Employee Balances</h3>
+    @if (!employees().length) { <div class="empty">No employees.</div> }
+    @else {
+      <div class="table-wrap"><table>
+        <thead><tr><th>Employee</th><th>Phone</th><th>Available Balance</th></tr></thead>
+        <tbody>
+          @for (e of employees(); track e.id) {
+            <tr><td>{{ e.name }}</td><td>{{ e.phone }}</td><td><b>{{ inr0(store.balanceOf(e.id)) }}</b></td></tr>
+          }
+        </tbody>
+      </table></div>
+    }
+  </div>
+
+  <div class="card">
+    <h3>All Requests</h3>
+    @if (!store.funds().length) { <div class="empty"><i class="fa-solid fa-wallet"></i>No requests.</div> }
+    @else {
+      <div class="table-wrap"><table>
+        <thead><tr><th>Employee</th><th>Amount</th><th>Note</th><th>Status</th><th>Requested</th></tr></thead>
+        <tbody>
+          @for (f of store.funds(); track f.id) {
+            <tr>
+              <td>{{ empName(f.employeeId) }}</td><td><b>{{ inr0(f.amount) }}</b></td><td>{{ f.note || '—' }}</td>
+              <td><span class="badge" [ngClass]="f.status">{{ f.status }}</span></td><td>{{ date(f.requestedAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table></div>
+    }
+  </div>
+} @else {
+  <!-- EMPLOYEE -->
+  <div class="page-head">
+    <div><h2>Add Funds</h2><p>Request billing funds from admin</p></div>
+    <span class="wallet-chip" style="font-size:14px">Available: {{ inr0(store.balanceOf(store.me()!.id)) }}</span>
+  </div>
+
+  <div class="card" style="max-width:480px">
+    <h3>Request Funds</h3>
+    <div class="field"><label>Amount (₹)</label><input type="number" min="1" placeholder="e.g. 100000" [(ngModel)]="amount"></div>
+    <div class="field"><label>Note (optional)</label><input placeholder="reason / shift" [(ngModel)]="note"></div>
+    <button class="btn btn-gold btn-block" [disabled]="busy()" (click)="request()">Send Request to Admin</button>
+    <p class="hintline">You can only bill customers up to your available approved balance.</p>
+  </div>
+
+  <div class="card">
+    <h3>My Requests</h3>
+    @if (!store.funds().length) { <div class="empty"><i class="fa-solid fa-wallet"></i>No requests.</div> }
+    @else {
+      <div class="table-wrap"><table>
+        <thead><tr><th>Amount</th><th>Note</th><th>Status</th><th>Requested</th></tr></thead>
+        <tbody>
+          @for (f of store.funds(); track f.id) {
+            <tr>
+              <td><b>{{ inr0(f.amount) }}</b></td><td>{{ f.note || '—' }}</td>
+              <td><span class="badge" [ngClass]="f.status">{{ f.status }}</span></td><td>{{ date(f.requestedAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table></div>
+    }
+  </div>
+}

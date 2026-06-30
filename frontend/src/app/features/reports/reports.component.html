@@ -1,0 +1,28 @@
+<div class="page-head"><div><h2>Reports</h2><p>Daily, weekly &amp; monthly performance</p></div></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h3>Today — by Metal (doughnut)</h3>
+    <canvas #dayCanvas height="220" [style.display]="hasToday ? 'block' : 'none'"></canvas>
+    @if (!hasToday) { <div class="empty"><i class="fa-solid fa-chart-pie"></i>No bills today yet.</div> }
+  </div>
+  <div class="card">
+    <h3>This Week — Payouts (graph)</h3>
+    <canvas #weekCanvas height="220"></canvas>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Monthly Report (table)</h3>
+  @if (!monthRows.length) { <div class="empty"><i class="fa-solid fa-table"></i>No monthly data yet.</div> }
+  @else {
+    <div class="table-wrap"><table>
+      <thead><tr><th>Month</th><th>Bills</th><th>Gold Payout</th><th>Silver Payout</th><th>Total Payout</th></tr></thead>
+      <tbody>
+        @for (m of monthRows; track m.label) {
+          <tr><td><b>{{ m.label }}</b></td><td>{{ m.count }}</td><td>{{ inr0(m.gold) }}</td><td>{{ inr0(m.silver) }}</td><td><b>{{ inr0(m.total) }}</b></td></tr>
+        }
+      </tbody>
+    </table></div>
+  }
+</div>

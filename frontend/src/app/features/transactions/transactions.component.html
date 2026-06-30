@@ -1,0 +1,12 @@
+<div class="page-head">
+  <div><h2>Transaction List</h2>
+    <p>Most recent sale per customer ({{ store.latestTxns().length }} customer{{ store.latestTxns().length === 1 ? '' : 's' }})</p></div>
+  <a routerLink="/new" class="btn btn-gold"><i class="fa-solid fa-plus"></i> New Transaction</a>
+</div>
+<p class="hintline" style="margin-bottom:12px">
+  <i class="fa-solid fa-circle-info"></i> Only the latest transaction of each customer is shown here.
+  Use the Dashboard search to see a customer's full history.
+</p>
+<div class="card">
+  <app-txn-table [rows]="store.latestTxns()"></app-txn-table>
+</div>

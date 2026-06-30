@@ -1,0 +1,25 @@
+# ---- Node / Angular ----
+**/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/out-tsc/
+frontend/coverage/
+
+# ---- Java / Maven ----
+backend/target/
+
+# ---- Secrets / env ----
+**/.env
+*.env
+!**/.env.example
+
+# ---- Logs ----
+*.log
+npm-debug.log*
+
+# ---- OS / editor / tooling ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/

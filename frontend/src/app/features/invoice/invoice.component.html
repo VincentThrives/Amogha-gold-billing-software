@@ -1,0 +1,87 @@
+@if (!txn) {
+  <div class="empty">Invoice not found.</div>
+} @else {
+  <div class="page-head no-print">
+    <div><h2>Invoice {{ txn.billNo }}</h2><p>{{ txn.customer.name }} • {{ date(txn.date) }}</p></div>
+    <div class="row">
+      <a routerLink="/dashboard" class="btn btn-ghost">&larr; Back</a>
+      <button class="btn btn-purple" (click)="print()"><i class="fa-solid fa-print"></i> Print</button>
+      <button class="btn btn-gold" [disabled]="busy()" (click)="downloadPdf()"><i class="fa-solid fa-download"></i> Download PDF</button>
+    </div>
+  </div>
+
+  <div id="invoiceArea">
+    <div class="invoice" id="invoiceDoc">
+      <div class="inv-head"><img src="logo.png" alt="logo"><h1>{{ company.name }}</h1></div>
+      <div class="inv-title">Invoice</div>
+
+      <div class="inv-meta">
+        <div class="cd">
+          <b>Company Details</b>
+          @for (l of company.addressLines; track l) { {{ l }}<br> }
+          @if (company.gstn) { GSTN:{{ company.gstn }} }
+        </div>
+        <div>
+          <table>
+            <tr><td>Customer Name</td><td>: {{ txn.customer.name }}</td></tr>
+            <tr><td>Mobile No</td><td>: {{ txn.customer.phone }}</td></tr>
+            <tr><td>Bill No</td><td>: {{ txn.billNo }}</td></tr>
+            <tr><td>Date</td><td>: {{ date(txn.date) }}</td></tr>
+            <tr><td>Address</td><td>: {{ address }}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <table class="inv-items">
+        <thead>
+          <tr>
+            <th>Item/Article</th><th>Gross Weight (Gms)</th><th>Stone Weight (Gms)</th><th>Other Weight (Gms)</th>
+            <th>Net Weight (Gms)</th><th>{{ rateLabel }} Price/ Gms (INR)</th><th>Purity (%)</th><th>Amount (INR)</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (it of txn.items; track $index) {
+            <tr>
+              <td>{{ it.article || txn.article }}</td><td>{{ it.gross.toFixed(2) }}</td><td>{{ it.stone.toFixed(2) }}</td>
+              <td>{{ it.other.toFixed(2) }}</td><td>{{ it.net.toFixed(2) }}</td><td>{{ inr2(it.rate) }}</td>
+              <td>{{ it.purity.toFixed(2) }}</td><td>{{ inr2(it.amount) }}</td>
+            </tr>
+          }
+          @for (p of pad; track p) {
+            <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          }
+          <tr>
+            <td><b>Total</b></td><td>{{ totalWeights.g.toFixed(2) }}</td><td>{{ totalWeights.s.toFixed(2) }}</td>
+            <td>{{ totalWeights.o.toFixed(2) }}</td><td>{{ totalWeights.n.toFixed(2) }}</td><td></td><td></td>
+            <td>{{ inr2(txn.totals.grossAmount) }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="inv-tot">
+        <tbody>
+          <tr><td>Gross Amount (INR)</td><td>{{ inr2(txn.totals.grossAmount) }}</td></tr>
+          <tr><td>Margin (INR)</td><td>{{ inr2(txn.totals.margin) }}</td></tr>
+          <tr><td>Billing Charges (INR)</td><td>{{ inr2(txn.totals.billingCharges) }}</td></tr>
+          <tr><td>Net Amount (INR)</td><td>{{ inr2(txn.totals.netAmount) }}</td></tr>
+          <tr><td><b>Amount Payable</b></td><td><b>{{ inr0(txn.totals.amountPayable) }}</b></td></tr>
+        </tbody>
+      </table>
+
+      <div class="inv-words">{{ words(txn.totals.amountPayable) }}</div>
+
+      <div class="inv-terms">
+        <h4>Terms and Conditions</h4>
+        <ul>
+          @for (t of company.terms; track t) { <li>{{ t }}</li> }
+          <li>I accept the terms and conditions mentioned above and to all the conditions that are mentioned in the attached application form.</li>
+        </ul>
+      </div>
+
+      <div class="inv-sign">
+        <div>Authorized Signature<br>{{ company.legalName || ('For ' + company.name) }}</div>
+        <div>Customer Signature</div>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,36 @@
+.app{display:flex;min-height:100vh}
+.sidebar{width:230px;background:linear-gradient(180deg,var(--purple),#2a0739);color:#f3e9d6;flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.1)}
+.brand img{width:38px;height:38px;object-fit:contain;background:#fff;border-radius:8px;padding:3px}
+.nav{padding:12px 10px;display:flex;flex-direction:column;gap:3px;overflow:auto}
+.nav-item{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:10px;color:#e7d9bf;font-weight:500;font-size:13.5px}
+.nav-item i{width:18px;text-align:center}
+.nav-item:hover{background:rgba(255,255,255,.08)}
+.nav-item.active{background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#3a2a06;font-weight:600}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:14px;padding:12px 20px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.icon-btn{display:none;background:none;border:0;font-size:18px;cursor:pointer;color:var(--purple)}
+.topbar-info{display:flex;gap:8px;flex-wrap:wrap}
+.rate-chip{background:#fbf3df;color:var(--gold-dark);padding:6px 11px;border-radius:20px;font-size:12.5px;font-weight:500}
+.rate-chip.silver{background:#eef0f3;color:#566}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.wallet-chip{background:#eafaf0;color:var(--ok);padding:6px 11px;border-radius:20px;font-size:12.5px;font-weight:600}
+.user-chip{font-size:13px}
+.user-chip small{display:block;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px}
+.content{padding:22px;max-width:1150px;width:100%;margin:0 auto}
+
+@media(max-width:880px){
+  .sidebar{position:fixed;z-index:50;left:-240px;transition:.2s;box-shadow:var(--shadow)}
+  .sidebar.open{left:0}
+  .icon-btn{display:block}
+}
+@media(max-width:560px){
+  .topbar{flex-wrap:wrap;gap:8px;padding:10px 12px}
+  .topbar-info{order:3;width:100%}
+  .topbar-info .rate-chip{font-size:11.5px;padding:5px 9px}
+  .topbar-right{gap:8px}
+  .user-chip{font-size:12px}
+  .user-chip small{font-size:9.5px}
+  .topbar-right .btn{padding:8px 10px}
+}

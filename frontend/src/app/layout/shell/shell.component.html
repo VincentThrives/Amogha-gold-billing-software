@@ -1,0 +1,46 @@
+<div class="app">
+  <aside class="sidebar" [class.open]="menuOpen()">
+    <div class="brand">
+      <img src="logo.png" alt="Amogha">
+      <span>Amogha Gold</span>
+    </div>
+    <nav class="nav">
+      @for (item of nav; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+          <i class="fa-solid" [ngClass]="item.icon"></i> {{ item.label }}
+        </a>
+      }
+      @if (store.isAdmin()) {
+        <a routerLink="/settings" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+          <i class="fa-solid fa-gear"></i> Settings
+        </a>
+      }
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" (click)="menuOpen.set(!menuOpen())"><i class="fa-solid fa-bars"></i></button>
+      <div class="topbar-info">
+        <span class="rate-chip"><i class="fa-solid fa-coins"></i> Gold
+          <b>{{ store.rates().gold ? inr0(store.rates().gold) : 'not set' }}</b>/g</span>
+        <span class="rate-chip silver"><i class="fa-solid fa-coins"></i> Silver
+          <b>{{ store.rates().silver ? inr0(store.rates().silver) : 'not set' }}</b>/g</span>
+      </div>
+      <div class="topbar-right">
+        @if (store.me()?.role === 'employee') {
+          <span class="wallet-chip" title="Available billing funds">
+            <i class="fa-solid fa-wallet"></i> <b>{{ inr0(store.balanceOf(store.me()!.id)) }}</b>
+          </span>
+        }
+        <span class="user-chip"><i class="fa-solid fa-circle-user"></i>
+          <b>{{ store.me()?.name }}</b> <small>{{ store.me()?.role }}</small></span>
+        <button class="btn btn-ghost" (click)="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

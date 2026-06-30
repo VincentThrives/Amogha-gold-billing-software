@@ -1,0 +1,39 @@
+<div class="page-head">
+  <div><h2>Dashboard</h2><p>Overview &amp; full transaction search</p></div>
+  <a routerLink="/new" class="btn btn-gold"><i class="fa-solid fa-plus"></i> New Transaction</a>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="lbl">Total Transactions</div><div class="val">{{ store.transactions().length }}</div><div class="sub">all time</div></div>
+  <div class="stat"><div class="lbl">Today's Bills</div><div class="val">{{ todayCount().length }}</div><div class="sub">{{ inr0(sumToday()) }} paid</div></div>
+  <div class="stat"><div class="lbl">Total Paid Out</div><div class="val">{{ inr0(sumAll()) }}</div><div class="sub">all time</div></div>
+  <div class="stat"><div class="lbl">Gold Rate</div>
+    <div class="val">{{ store.rates().gold ? inr0(store.rates().gold) + '/g' : 'not set' }}</div>
+    <div class="sub">Silver {{ store.rates().silver ? inr0(store.rates().silver) + '/g' : '—' }}</div></div>
+</div>
+
+<div class="card">
+  <h3><i class="fa-solid fa-magnifying-glass"></i> Search Transactions</h3>
+  <div class="searchbar">
+    <div class="field" style="max-width:170px">
+      <label>Search by</label>
+      <select [ngModel]="searchType()" (ngModelChange)="searchType.set($event)">
+        <option value="all">All fields</option>
+        <option value="name">Customer Name</option>
+        <option value="bill">Bill ID</option>
+        <option value="phone">Phone Number</option>
+        <option value="other">Other (address / ID / ref)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Search term</label>
+      <input placeholder="Type to search…" [ngModel]="term()" (ngModelChange)="term.set($event)" autocomplete="off">
+    </div>
+    <button class="btn btn-ghost" (click)="clear()">Clear</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>{{ term().trim() ? results().length + ' result' + (results().length === 1 ? '' : 's') : 'All Transactions' }}</h3>
+  <app-txn-table [rows]="results()"></app-txn-table>
+</div>

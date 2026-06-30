@@ -1,0 +1,20 @@
+# Tests run against an in-process MongoDB (flapdoodle), no external DB needed.
+spring:
+  data:
+    mongodb:
+      database: amogha_billing_test
+de:
+  flapdoodle:
+    mongodb:
+      embedded:
+        version: 7.0.4
+app:
+  jwt:
+    secret: test-secret-test-secret-test-secret-test-secret-test-secret-1234567890
+    ttl-minutes: 720
+  otp:
+    ttl-minutes: 5
+  cors:
+    allowed-origins: http://localhost:4200
+  web:
+    static-dir: ./nonexistent-static

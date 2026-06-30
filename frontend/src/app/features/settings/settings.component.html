@@ -1,0 +1,36 @@
+<div class="page-head"><div><h2>Settings</h2><p>Company details, staff &amp; data</p></div></div>
+
+<div class="card" style="max-width:640px">
+  <h3>Company Details (shown on invoice)</h3>
+  <div class="field"><label>Company Name</label><input [(ngModel)]="name"></div>
+  <div class="field"><label>Address (one line per row)</label><textarea rows="3" [(ngModel)]="addr"></textarea></div>
+  <div class="grid grid-2">
+    <div class="field"><label>GSTN</label><input placeholder="e.g. 29ABFCA1286P1Z2" [(ngModel)]="gstn"></div>
+    <div class="field"><label>Phone</label><input [(ngModel)]="phone"></div>
+  </div>
+  <button class="btn btn-gold" style="margin-top:12px" [disabled]="busy()" (click)="saveCompany()">Save Company</button>
+</div>
+
+<div class="card" style="max-width:640px">
+  <h3>Employees</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Name</th><th>Phone</th><th></th></tr></thead>
+    <tbody>
+      @for (e of employees(); track e.id) {
+        <tr><td>{{ e.name }}</td><td>{{ e.phone }}</td>
+          <td class="right"><button class="btn btn-sm btn-err" (click)="removeEmployee(e.id)">Remove</button></td></tr>
+      }
+    </tbody>
+  </table></div>
+  <div class="row" style="margin-top:12px">
+    <input placeholder="Name" style="flex:1" [(ngModel)]="empName">
+    <input placeholder="10-digit phone" inputmode="numeric" maxlength="10" style="flex:1" [ngModel]="empPhone" (ngModelChange)="onEmpPhone($event)">
+    <button class="btn btn-purple" (click)="addEmployee()">Add Employee</button>
+  </div>
+</div>
+
+<div class="card" style="max-width:640px">
+  <h3>Data</h3>
+  <p class="muted">Records are stored in MongoDB. Resetting wipes all transactions, funds and rates.</p>
+  <button class="btn btn-err" (click)="reset()">Reset all data</button>
+</div>
