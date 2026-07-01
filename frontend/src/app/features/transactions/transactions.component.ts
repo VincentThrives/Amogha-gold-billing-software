@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
+import { ToastService } from '../../core/services/toast.service';
 import { TxnTableComponent } from '../../shared/txn-table/txn-table.component';
 import { Txn } from '../../core/models';
 
@@ -17,6 +18,7 @@ type SearchType = 'all' | 'name' | 'phone' | 'bill';
 })
 export class TransactionsComponent {
   store = inject(StoreService);
+  private toast = inject(ToastService);
 
   searchType = signal<SearchType>('all');
   term = signal('');
@@ -45,4 +47,12 @@ export class TransactionsComponent {
   });
 
   clear() { this.term.set(''); this.searchType.set('all'); }
+
+  async onDelete(t: Txn) {
+    if (!confirm(`Move bill ${t.billNo} (${t.customer.name}) to Deleted Invoices? The staff payout will be refunded.`)) return;
+    try {
+      await this.store.deleteTxn(t.id);
+      this.toast.show(`Bill ${t.billNo} moved to Deleted Invoices.`);
+    } catch (e: any) { this.toast.err(e?.error?.error || 'Could not delete.'); }
+  }
 }

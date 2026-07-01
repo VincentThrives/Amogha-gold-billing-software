@@ -33,4 +33,23 @@ describe('TxnTableComponent', () => {
     expect(el.querySelector('.empty')).toBeTruthy();
     expect(el.querySelector('table')).toBeNull();
   });
+
+  it('emits (delete) when allowDelete is on and the trash button is clicked', () => {
+    TestBed.configureTestingModule({ imports: [TxnTableComponent], providers: [provideRouter([])] });
+    const f = TestBed.createComponent(TxnTableComponent);
+    f.componentInstance.rows = [txn('1', 'A')];
+    f.componentInstance.allowDelete = true;
+    const spy = jasmine.createSpy('delete');
+    f.componentInstance.delete.subscribe(spy);
+    f.detectChanges();
+    const btn = (f.nativeElement as HTMLElement).querySelector('tbody .btn-err') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    btn.click();
+    expect(spy).toHaveBeenCalledWith(f.componentInstance.rows[0]);
+  });
+
+  it('hides the delete button when allowDelete is off', () => {
+    const el = render([txn('1', 'A')]);   // default allowDelete = false
+    expect(el.querySelector('tbody .btn-err')).toBeNull();
+  });
 });

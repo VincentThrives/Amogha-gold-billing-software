@@ -23,6 +23,7 @@ export class InvoiceComponent implements OnInit {
   company!: Company;
   pad: number[] = [];
   busy = signal(false);
+  mode = signal<'invoice' | 'estimation'>('invoice');
 
   inr2 = (n: number) => inr(n, 2);
   inr0 = (n: number) => inr(n, 0);
@@ -68,9 +69,11 @@ export class InvoiceComponent implements OnInit {
     this.busy.set(true);
     try {
       const html2pdf = (await import('html2pdf.js')).default;
+      const name = this.txn!.customer.name.replace(/\s+/g, '_');
+      const fname = this.mode() === 'estimation' ? `Amogha_Estimate_${name}` : `Amogha_${this.txn!.billNo}_${name}`;
       await html2pdf().set({
         margin: 6,
-        filename: `Amogha_${this.txn!.billNo}_${this.txn!.customer.name.replace(/\s+/g, '_')}.pdf`,
+        filename: `${fname}.pdf`,
         image: { type: 'jpeg', quality: 0.97 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },

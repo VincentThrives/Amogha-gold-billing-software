@@ -1,1 +1,10 @@
 :host { display: block; }
+
+.mode-toggle {
+  display: inline-flex; background: #f3ecdc; padding: 4px; border-radius: 10px; gap: 3px;
+}
+.mode-btn {
+  border: 0; background: transparent; padding: 7px 12px; border-radius: 7px; cursor: pointer;
+  font: inherit; font-weight: 600; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px;
+}
+.mode-btn.on { background: #fff; color: var(--purple); box-shadow: 0 2px 6px rgba(0, 0, 0, .08); }

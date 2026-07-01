@@ -6,6 +6,7 @@ import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Txn, TxnItem } from '../../core/models';
 import { computeTotals, itemAmount, netWeight, inr, billDate } from '../../core/calc';
+import { ARTICLE_OPTIONS } from '../../core/articles';
 import { highlightField } from '../../core/ui';
 
 interface ItemRow { article: string; gross: number | null; stone: number; other: number; purity: number; rate: number; }
@@ -23,6 +24,7 @@ export class ApprovalEditComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
+  readonly articleOptions = ARTICLE_OPTIONS;
   txn = signal<Txn | null>(null);
   items = signal<ItemRow[]>([]);
   margin = 0;

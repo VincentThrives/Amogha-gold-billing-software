@@ -11,6 +11,10 @@
     <div class="muted">Bill {{ t.billNo }} · <span class="badge silver">{{ t.metal }}</span> · submitted by {{ t.employeeName }} · {{ date(t.date) }}</div>
   </div>
 
+  <datalist id="article-options">
+    @for (a of articleOptions; track a) { <option [value]="a"></option> }
+  </datalist>
+
   <!-- Items (editable, incl. 24crt rate) -->
   <div class="card">
     <h3><i class="fa-solid fa-scale-balanced"></i> Item Details <small class="muted">(editable)</small></h3>
@@ -27,7 +31,7 @@
           @for (it of items(); track $index) {
             <tr>
               <td class="center muted">{{ $index + 1 }}</td>
-              <td><input [id]="'a_article_' + $index" [(ngModel)]="it.article" placeholder="e.g. NECKLACE"></td>
+              <td><input [id]="'a_article_' + $index" list="article-options" [(ngModel)]="it.article" placeholder="Select or type…" autocomplete="off"></td>
               <td><input [id]="'a_gross_' + $index" type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.gross"></td>
               <td><input type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.stone"></td>
               <td><input type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.other"></td>

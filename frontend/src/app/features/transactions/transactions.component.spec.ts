@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { TransactionsComponent } from './transactions.component';
 import { StoreService } from '../../core/services/store.service';
+import { ToastService } from '../../core/services/toast.service';
 import { Txn } from '../../core/models';
 
 function txn(id: string, name: string, phone: string, billNo: string, employeeId: string): Txn {
@@ -21,11 +22,17 @@ const TXNS: Txn[] = [
   txn('t3', 'PRIYANKA RAJ', '9665870336', '2211AABBCC', 'u-emp1'),  // same customer, 2nd bill
 ];
 
+let deleteTxn: jasmine.Spy;
 function make(isAdmin: boolean, meId: string) {
-  const store = { transactions: signal(TXNS), isAdmin: () => isAdmin, me: () => ({ id: meId }) };
+  deleteTxn = jasmine.createSpy('deleteTxn').and.resolveTo(undefined);
+  const store = { transactions: signal(TXNS), isAdmin: () => isAdmin, me: () => ({ id: meId }), deleteTxn };
   TestBed.configureTestingModule({
     imports: [TransactionsComponent],
-    providers: [{ provide: StoreService, useValue: store }, provideRouter([])],
+    providers: [
+      { provide: StoreService, useValue: store },
+      { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['show', 'err']) },
+      provideRouter([]),
+    ],
   });
   return TestBed.createComponent(TransactionsComponent).componentInstance;
 }
@@ -67,5 +74,19 @@ describe('TransactionsComponent', () => {
     expect(cmp.term()).toBe('');
     expect(cmp.searchType()).toBe('all');
     expect(cmp.results().length).toBe(3);
+  });
+
+  it('onDelete confirms then soft-deletes the bill', async () => {
+    spyOn(window, 'confirm').and.returnValue(true);
+    const cmp = make(true, 'u-admin');
+    await cmp.onDelete(cmp.results()[0]);
+    expect(deleteTxn).toHaveBeenCalledWith('t1');
+  });
+
+  it('onDelete does nothing when cancelled', async () => {
+    spyOn(window, 'confirm').and.returnValue(false);
+    const cmp = make(true, 'u-admin');
+    await cmp.onDelete(cmp.results()[0]);
+    expect(deleteTxn).not.toHaveBeenCalled();
   });
 });

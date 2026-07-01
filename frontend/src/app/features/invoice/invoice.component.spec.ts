@@ -61,6 +61,13 @@ describe('InvoiceComponent', () => {
     expect(cmp.pad.length).toBe(5); // 1 item + 5 pad = 6
   });
 
+  it('defaults to invoice mode and can switch to estimation', () => {
+    const cmp = build();
+    expect(cmp.mode()).toBe('invoice');
+    cmp.mode.set('estimation');
+    expect(cmp.mode()).toBe('estimation');
+  });
+
   it('deleteBill (confirmed) soft-deletes and returns to the list', async () => {
     spyOn(window, 'confirm').and.returnValue(true);
     const cmp = build();

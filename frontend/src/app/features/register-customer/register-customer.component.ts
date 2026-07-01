@@ -38,11 +38,19 @@ export class RegisterCustomerComponent {
   async save() {
     const v = validateKyc(this.kyc);
     if (!v.ok) { this.toast.err(v.message!); highlightField(document.getElementById(v.fieldId!)); return; }
+
+    // warn if a customer already exists with this phone number
+    const existing = this.store.customers().find(c => c.phone === this.kyc.phone.trim());
+    if (existing && !confirm(
+      `A customer already exists with this number ${existing.phone} — ${existing.name}.\n\nUpdate their details?`)) {
+      return;
+    }
+
     this.busy.set(true);
     try {
       const res = await this.store.registerCustomer(kycToRegistration(this.kyc));
       this.toast.ok(res.existed
-        ? `Customer already exists — details updated (${res.customer.name}).`
+        ? `Customer details updated — ${res.customer.name}.`
         : `Customer registered — ${res.customer.name}.`);
       this.kyc = emptyKyc();
       window.scrollTo({ top: 0, behavior: 'smooth' });

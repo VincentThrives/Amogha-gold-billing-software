@@ -17,10 +17,10 @@ describe('RegisterCustomerComponent', () => {
   let router: Router;
   const customers = signal<RegisteredCustomer[]>([]);
 
-  function fillValidKyc() {
+  function fillValidKyc(phone = '9111100000') {   // default = a phone NOT already registered
     cmp.kyc.selectedIds = ['PAN Card'];
     cmp.kyc.idNumbers = { 'PAN Card': 'ABCDE1234F' };
-    cmp.kyc.name = 'Ravi'; cmp.kyc.phone = '9800000000'; cmp.kyc.addr1 = 'MG Road'; cmp.kyc.pin = '560073';
+    cmp.kyc.name = 'Ravi'; cmp.kyc.phone = phone; cmp.kyc.addr1 = 'MG Road'; cmp.kyc.pin = '560073';
   }
 
   beforeEach(() => {
@@ -48,18 +48,28 @@ describe('RegisterCustomerComponent', () => {
     expect(register).not.toHaveBeenCalled();
   });
 
-  it('registers a new customer', async () => {
-    fillValidKyc();
+  it('registers a new customer (no popup for a fresh phone)', async () => {
+    fillValidKyc('9111100000');
     await cmp.save();
     expect(register).toHaveBeenCalled();
     expect(toast.ok).toHaveBeenCalledWith(jasmine.stringMatching(/Customer registered/));
   });
 
-  it('shows "already exists — updated" when the phone was already registered', async () => {
-    register.and.resolveTo({ customer: customer('c1', 'Ravi Kumar', '9800000000'), existed: true });
-    fillValidKyc();
+  it('pops up "already exists with this number" and cancelling aborts the save', async () => {
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+    fillValidKyc('9800000000');  // already registered to Ravi (c1)
     await cmp.save();
-    expect(toast.ok).toHaveBeenCalledWith(jasmine.stringMatching(/already exists — details updated/));
+    expect(confirmSpy).toHaveBeenCalledWith(jasmine.stringMatching(/already exists with this number/));
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it('confirming the popup updates the existing customer', async () => {
+    spyOn(window, 'confirm').and.returnValue(true);
+    register.and.resolveTo({ customer: customer('c1', 'Ravi Kumar', '9800000000'), existed: true });
+    fillValidKyc('9800000000');
+    await cmp.save();
+    expect(register).toHaveBeenCalled();
+    expect(toast.ok).toHaveBeenCalledWith(jasmine.stringMatching(/details updated/));
   });
 
   it('search filters the registered list by name or phone', () => {

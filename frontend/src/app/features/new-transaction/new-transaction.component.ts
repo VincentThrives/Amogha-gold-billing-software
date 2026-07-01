@@ -6,6 +6,7 @@ import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Metal, RegisteredCustomer, Txn } from '../../core/models';
 import { computeTotals, inr, itemAmount, netWeight } from '../../core/calc';
+import { ARTICLE_OPTIONS } from '../../core/articles';
 import { highlightField } from '../../core/ui';
 
 interface ItemRow { article: string; gross: number | null; stone: number; other: number; purity: number; rate: number; }
@@ -23,6 +24,7 @@ export class NewTransactionComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
+  readonly articleOptions = ARTICLE_OPTIONS;
   metal: Metal = 'gold';
   fixedRate = 0;
 
