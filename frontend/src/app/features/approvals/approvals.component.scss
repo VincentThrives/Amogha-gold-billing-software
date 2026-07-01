@@ -1,0 +1,22 @@
+.appr-head {
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px;
+}
+.appr-cust { font-weight: 700; color: var(--purple); font-size: 15px; }
+.appr-gross { font-size: 18px; font-weight: 700; }
+.appr-foot { display: flex; justify-content: flex-end; }
+
+.appr-controls {
+  display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+  .field { margin: 0; width: 150px; }
+}
+.appr-payable { min-width: 130px; }
+.appr-pay-val { font-size: 18px; font-weight: 700; color: var(--purple); }
+.appr-actions { display: flex; gap: 8px; margin-left: auto; }
+
+@media (max-width: 560px) {
+  .appr-controls { gap: 10px; }
+  .appr-controls .field { width: 100%; }
+  .appr-actions { margin-left: 0; width: 100%; }
+  .appr-actions .btn { flex: 1; justify-content: center; }
+}

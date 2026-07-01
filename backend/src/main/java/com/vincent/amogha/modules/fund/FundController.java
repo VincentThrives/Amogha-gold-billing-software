@@ -17,7 +17,7 @@ public class FundController {
     }
 
     public record FundRequestBody(double amount, String note) {}
-    public record DecideBody(boolean approve) {}
+    public record DecideBody(boolean approve, String method, String reference) {}
 
     @PostMapping
     public FundRequest request(@RequestBody FundRequestBody body, @AuthenticationPrincipal AmoghaPrincipal principal) {
@@ -27,7 +27,7 @@ public class FundController {
     @PostMapping("/{id}/decide")
     public Map<String, Boolean> decide(@PathVariable String id, @RequestBody DecideBody body,
                                        @AuthenticationPrincipal AmoghaPrincipal principal) {
-        service.decide(id, body.approve(), principal);
+        service.decide(id, body.approve(), body.method(), body.reference(), principal);
         return Map.of("ok", true);
     }
 }

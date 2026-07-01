@@ -1,0 +1,70 @@
+@if (txn(); as t) {
+  <div class="page-head">
+    <div><h2>Edit &amp; Approve Bill</h2><p>Review, edit and finalise the staff bill</p></div>
+    <a routerLink="/approvals" class="btn btn-ghost">&larr; Back</a>
+  </div>
+
+  <!-- Customer (read-only) -->
+  <div class="card">
+    <h3><i class="fa-solid fa-user"></i> Customer</h3>
+    <div class="cust-line"><b>{{ t.customer.name }}</b> · {{ t.customer.phone }} · {{ t.customer.address1 }}@if (t.customer.pincode) {, PIN {{ t.customer.pincode }}}</div>
+    <div class="muted">Bill {{ t.billNo }} · <span class="badge silver">{{ t.metal }}</span> · submitted by {{ t.employeeName }} · {{ date(t.date) }}</div>
+  </div>
+
+  <!-- Items (editable, incl. 24crt rate) -->
+  <div class="card">
+    <h3><i class="fa-solid fa-scale-balanced"></i> Item Details <small class="muted">(editable)</small></h3>
+    <div class="table-wrap">
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width:34px">#</th>
+            <th>Item / Article <span class="req">*</span></th><th>Gross Wt (g) <span class="req">*</span></th><th>Stone Wt (g)</th><th>Other Wt (g)</th>
+            <th>Net Wt (g)</th><th>Purity (%)</th><th>{{ t.metal === 'gold' ? '24crt' : '999' }} Rate/g</th><th>Amount</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (it of items(); track $index) {
+            <tr>
+              <td class="center muted">{{ $index + 1 }}</td>
+              <td><input [id]="'a_article_' + $index" [(ngModel)]="it.article" placeholder="e.g. NECKLACE"></td>
+              <td><input [id]="'a_gross_' + $index" type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.gross"></td>
+              <td><input type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.stone"></td>
+              <td><input type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.other"></td>
+              <td>{{ net(it).toFixed(2) }}</td>
+              <td><input type="number" min="0" max="100" step="0.01" style="width:75px" [(ngModel)]="it.purity"></td>
+              <td><input [id]="'a_rate_' + $index" type="number" min="0" step="0.01" style="width:95px" [(ngModel)]="it.rate"></td>
+              <td class="right">{{ inr2(amount(it)) }}</td>
+              <td><button type="button" class="btn btn-sm btn-ghost" [disabled]="items().length === 1"
+                    [title]="items().length === 1 ? 'At least one item is required' : 'Remove this item'"
+                    (click)="removeItem($index)"><i class="fa-solid fa-trash"></i></button></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <button type="button" class="btn btn-sm btn-ghost" style="margin-top:10px" (click)="addItem()"><i class="fa-solid fa-plus"></i> Add item</button>
+    <p class="hintline"><i class="fa-solid fa-circle-info"></i> You can edit the {{ t.metal }} rate here — totals recompute automatically.</p>
+  </div>
+
+  <!-- Charges + totals -->
+  <div class="card">
+    <h3><i class="fa-solid fa-receipt"></i> Charges &amp; Total</h3>
+    <div class="grid grid-2" style="max-width:520px">
+      <div class="field"><label>Margin (₹ deducted)</label><input type="number" min="0" [(ngModel)]="margin"></div>
+      <div class="field"><label>Billing Charges (₹ deducted)</label><input type="number" min="0" [(ngModel)]="charges"></div>
+    </div>
+    <div class="totbox" style="margin-top:14px">
+      <div class="line"><span>Gross Amount</span><b>{{ inr2(totals().grossAmount) }}</b></div>
+      <div class="line"><span>Margin</span><b>{{ inr2(totals().margin) }}</b></div>
+      <div class="line"><span>Net Amount</span><b>{{ inr2(totals().netAmount) }}</b></div>
+      <div class="line"><span>Billing Charges</span><b>{{ inr2(totals().billingCharges) }}</b></div>
+      <div class="line big"><span>Amount Payable</span><b>{{ inr0(totals().amountPayableRounded) }}</b></div>
+    </div>
+  </div>
+
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn btn-err" [disabled]="busy()" (click)="reject()"><i class="fa-solid fa-xmark"></i> Reject</button>
+    <button class="btn btn-gold" [disabled]="busy()" (click)="approve()"><i class="fa-solid fa-file-invoice-dollar"></i> Approve &amp; Generate Bill</button>
+  </div>
+}

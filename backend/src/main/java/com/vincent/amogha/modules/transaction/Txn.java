@@ -21,6 +21,12 @@ public class Txn {
     public String article;
     public List<TxnItem> items;
     public Totals totals;
+    public String status;        // pending | approved | rejected
+    public String approvedBy;    // admin user id
+    public String approvedAt;    // ISO timestamp
+    public boolean deleted;      // soft-deleted → shown only in the recycle bin
+    public String deletedAt;
+    public String deletedBy;
 
     public static class Customer {
         public String name;

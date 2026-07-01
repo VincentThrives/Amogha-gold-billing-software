@@ -1,11 +1,12 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { AppState, Company, FundRequest, Rates, Txn, User } from '../models';
+import { AppState, BillingConfig, Company, FundRequest, Rates, RegisteredCustomer, Txn, TxnItem, User } from '../models';
 import { AuthService } from './auth.service';
 import { latestPerCustomer } from '../calc';
 
 const EMPTY_RATES: Rates = { gold: 0, silver: 0, updatedAt: null, updatedBy: null };
+const DEFAULT_BILLING: BillingConfig = { defaultMargin: 0, defaultBillingCharges: 100 };
 
 @Injectable({ providedIn: 'root' })
 export class StoreService {
@@ -20,9 +21,22 @@ export class StoreService {
   readonly transactions = signal<Txn[]>([]);
   readonly funds = signal<FundRequest[]>([]);
   readonly balances = signal<Record<string, number>>({});
+  readonly customers = signal<RegisteredCustomer[]>([]);
+  readonly billingConfig = signal<BillingConfig>(DEFAULT_BILLING);
+  readonly deletedTransactions = signal<Txn[]>([]);
 
   readonly isAdmin = computed(() => this.me()?.role === 'admin');
   readonly latestTxns = computed(() => latestPerCustomer(this.transactions()));
+  readonly pendingTxns = computed(() => this.transactions().filter(t => t.status === 'pending'));
+
+  customerById(id: string): RegisteredCustomer | undefined { return this.customers().find(c => c.id === id); }
+  /** search registered customers by name or phone (case-insensitive) */
+  searchCustomers(term: string): RegisteredCustomer[] {
+    const q = term.trim().toLowerCase();
+    if (!q) return [];
+    return this.customers().filter(c =>
+      (c.name || '').toLowerCase().includes(q) || (c.phone || '').includes(q)).slice(0, 8);
+  }
 
   userById(id: string): User | null {
     return this.users().find(u => u.id === id) ?? (this.me()?.id === id ? this.me() : null);
@@ -41,12 +55,16 @@ export class StoreService {
     this.transactions.set(s.transactions || []);
     this.funds.set(s.funds || []);
     this.balances.set(s.balances || {});
+    this.customers.set(s.customers || []);
+    this.billingConfig.set(s.billingConfig || DEFAULT_BILLING);
+    this.deletedTransactions.set(s.deletedTransactions || []);
     return true;
   }
 
   clear() {
     this.me.set(null); this.users.set([]); this.company.set(null);
     this.rates.set(EMPTY_RATES); this.transactions.set([]); this.funds.set([]); this.balances.set({});
+    this.customers.set([]); this.billingConfig.set(DEFAULT_BILLING); this.deletedTransactions.set([]);
   }
 
   /* ---- bill number (client side; server keeps it) ---- */
@@ -65,7 +83,19 @@ export class StoreService {
   async addEmployee(name: string, phone: string) { await firstValueFrom(this.http.post('/api/users', { name, phone })); await this.sync(); }
   async removeEmployee(id: string) { await firstValueFrom(this.http.delete(`/api/users/${encodeURIComponent(id)}`)); await this.sync(); }
   async addTxn(txn: Txn): Promise<Txn> { const saved = await firstValueFrom(this.http.post<Txn>('/api/transactions', txn)); await this.sync(); return saved; }
+  /** register (upsert-by-phone) a customer; returns whether they already existed */
+  async registerCustomer(payload: object): Promise<{ customer: RegisteredCustomer; existed: boolean }> {
+    const res = await firstValueFrom(this.http.post<{ customer: RegisteredCustomer; existed: boolean }>('/api/customers', payload));
+    await this.sync();
+    return res;
+  }
   async addFundRequest(amount: number, note: string) { await firstValueFrom(this.http.post('/api/funds', { amount, note })); await this.sync(); }
-  async decideFund(reqId: string, approve: boolean) { await firstValueFrom(this.http.post(`/api/funds/${encodeURIComponent(reqId)}/decide`, { approve })); await this.sync(); }
+  async decideFund(reqId: string, approve: boolean, method = '', reference = '') { await firstValueFrom(this.http.post(`/api/funds/${encodeURIComponent(reqId)}/decide`, { approve, method, reference })); await this.sync(); }
+  async setBillingConfig(defaultMargin: number, defaultBillingCharges: number) { await firstValueFrom(this.http.put('/api/billing-config', { defaultMargin, defaultBillingCharges })); await this.sync(); }
+  async approveTxn(id: string, items: TxnItem[], margin: number, billingCharges: number) { await firstValueFrom(this.http.post(`/api/transactions/${encodeURIComponent(id)}/approve`, { items, margin, billingCharges })); await this.sync(); }
+  async rejectTxn(id: string) { await firstValueFrom(this.http.post(`/api/transactions/${encodeURIComponent(id)}/reject`, {})); await this.sync(); }
+  async deleteTxn(id: string) { await firstValueFrom(this.http.post(`/api/transactions/${encodeURIComponent(id)}/delete`, {})); await this.sync(); }
+  async restoreTxn(id: string) { await firstValueFrom(this.http.post(`/api/transactions/${encodeURIComponent(id)}/restore`, {})); await this.sync(); }
+  async purgeTxn(id: string) { await firstValueFrom(this.http.delete(`/api/transactions/${encodeURIComponent(id)}`)); await this.sync(); }
   async resetAll() { await firstValueFrom(this.http.post('/api/admin/reset', {})); await this.sync(); }
 }

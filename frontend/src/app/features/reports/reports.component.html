@@ -1,26 +1,68 @@
-<div class="page-head"><div><h2>Reports</h2><p>Daily, weekly &amp; monthly performance</p></div></div>
+<div class="page-head">
+  <div><h2>Reports</h2><p>{{ mineOnly() ? 'Your sales' : 'All sales' }} for a selected day or period</p></div>
+</div>
 
-<div class="grid grid-2">
-  <div class="card">
-    <h3>Today — by Metal (doughnut)</h3>
-    <canvas #dayCanvas height="220" [style.display]="hasToday ? 'block' : 'none'"></canvas>
-    @if (!hasToday) { <div class="empty"><i class="fa-solid fa-chart-pie"></i>No bills today yet.</div> }
-  </div>
-  <div class="card">
-    <h3>This Week — Payouts (graph)</h3>
-    <canvas #weekCanvas height="220"></canvas>
+<!-- Date range -->
+<div class="card">
+  <div class="range">
+    <div class="field"><label>From date</label><input type="date" [ngModel]="from()" (ngModelChange)="from.set($event)" [max]="to()"></div>
+    <div class="field"><label>To date</label><input type="date" [ngModel]="to()" (ngModelChange)="to.set($event)" [min]="from()"></div>
+    <div class="range-presets">
+      <button class="btn btn-sm btn-ghost" (click)="setToday()">Today</button>
+      <button class="btn btn-sm btn-ghost" (click)="setMonth()">This month</button>
+    </div>
   </div>
 </div>
 
+<!-- Summary cards -->
+<div class="report-cards">
+  <div class="rep-card gold-c">
+    <div class="rep-metal"><i class="fa-solid fa-coins"></i> Gold bought</div>
+    <div class="rep-grams">{{ summary().goldG.toFixed(2) }} g</div>
+    <div class="rep-amt">Spent on gold <b>{{ inr0(summary().goldAmt) }}</b></div>
+  </div>
+  <div class="rep-card silver-c">
+    <div class="rep-metal"><i class="fa-solid fa-coins"></i> Silver bought</div>
+    <div class="rep-grams">{{ summary().silverG.toFixed(2) }} g</div>
+    <div class="rep-amt">Spent on silver <b>{{ inr0(summary().silverAmt) }}</b></div>
+  </div>
+  <div class="rep-card total-c">
+    <div class="rep-metal"><i class="fa-solid fa-indian-rupee-sign"></i> Total spent</div>
+    <div class="rep-grams">{{ inr0(summary().total) }}</div>
+    <div class="rep-amt">{{ summary().count }} bill{{ summary().count === 1 ? '' : 's' }}</div>
+  </div>
+</div>
+
+<!-- Transactions in the period -->
 <div class="card">
-  <h3>Monthly Report (table)</h3>
-  @if (!monthRows.length) { <div class="empty"><i class="fa-solid fa-table"></i>No monthly data yet.</div> }
-  @else {
+  <h3>Invoices in this period ({{ rows().length }})</h3>
+  @if (!rows().length) {
+    <div class="empty"><i class="fa-solid fa-receipt"></i>No approved bills in the selected period.</div>
+  } @else {
     <div class="table-wrap"><table>
-      <thead><tr><th>Month</th><th>Bills</th><th>Gold Payout</th><th>Silver Payout</th><th>Total Payout</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Date</th><th>Bill No</th><th>Customer</th><th>Phone</th><th>Metal</th><th>Item</th>
+          <th>Gross</th><th>Stone</th><th>Net Wt</th><th>Purity</th><th>Rate/g</th><th>Amount</th><th></th>
+        </tr>
+      </thead>
       <tbody>
-        @for (m of monthRows; track m.label) {
-          <tr><td><b>{{ m.label }}</b></td><td>{{ m.count }}</td><td>{{ inr0(m.gold) }}</td><td>{{ inr0(m.silver) }}</td><td><b>{{ inr0(m.total) }}</b></td></tr>
+        @for (t of rows(); track t.id) {
+          <tr>
+            <td>{{ date(t.date) }}</td>
+            <td><b>{{ t.billNo }}</b></td>
+            <td>{{ t.customer.name }}</td>
+            <td>{{ t.customer.phone || '—' }}</td>
+            <td><span class="badge" [ngClass]="t.metal">{{ t.metal }}</span></td>
+            <td>{{ t.article || t.items[0].article }}</td>
+            <td>{{ t.items[0].gross.toFixed(2) }}</td>
+            <td>{{ t.items[0].stone.toFixed(2) }}</td>
+            <td>{{ t.totals.netWeight.toFixed(2) }} g</td>
+            <td>{{ t.items[0].purity }}%</td>
+            <td>{{ inr0(t.items[0].rate) }}</td>
+            <td><b>{{ inr0(t.totals.amountPayable) }}</b></td>
+            <td class="right"><a class="btn btn-sm btn-ghost" [routerLink]="['/invoice', t.id]"><i class="fa-solid fa-file-invoice"></i></a></td>
+          </tr>
         }
       </tbody>
     </table></div>

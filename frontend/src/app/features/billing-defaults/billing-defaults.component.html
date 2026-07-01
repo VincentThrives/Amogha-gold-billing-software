@@ -1,0 +1,12 @@
+<div class="page-head">
+  <div><h2>Billing Defaults</h2><p>Default margin &amp; billing charges applied when approving bills</p></div>
+</div>
+
+<div class="card" style="max-width:640px">
+  <p class="muted">Pre-fills margin &amp; billing charges when you approve a staff bill (and on your own new bills).</p>
+  <div class="grid grid-2">
+    <div class="field"><label>Default Margin (₹)</label><input type="number" min="0" [(ngModel)]="defMargin"></div>
+    <div class="field"><label>Default Billing Charges (₹)</label><input type="number" min="0" [(ngModel)]="defCharges"></div>
+  </div>
+  <button class="btn btn-gold" style="margin-top:12px" [disabled]="busy()" (click)="save()">Save Billing Defaults</button>
+</div>

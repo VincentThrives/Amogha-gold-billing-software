@@ -22,11 +22,11 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   nav = [
     { path: '/dashboard', icon: 'fa-gauge-high', label: 'Dashboard' },
+    { path: '/register', icon: 'fa-user-plus', label: 'Register Customer' },
     { path: '/new', icon: 'fa-plus', label: 'New Transaction' },
     { path: '/transactions', icon: 'fa-list', label: 'Transaction List' },
     { path: '/rate', icon: 'fa-coins', label: 'Gold / Silver Rate' },
-    { path: '/funds', icon: 'fa-wallet', label: 'Add Funds' },
-    { path: '/reports', icon: 'fa-chart-pie', label: 'Reports' },
+    { path: '/funds', icon: 'fa-wallet', label: 'Fund Approvals' },
   ];
 
   inr0 = (n: number) => inr(n, 0);

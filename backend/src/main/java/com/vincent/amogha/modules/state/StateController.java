@@ -3,10 +3,13 @@ package com.vincent.amogha.modules.state;
 import com.vincent.amogha.common.ApiException;
 import com.vincent.amogha.config.security.AmoghaPrincipal;
 import com.vincent.amogha.modules.auth.dto.AuthDtos.UserDto;
+import com.vincent.amogha.modules.customer.CustomerRepository;
 import com.vincent.amogha.modules.fund.Balance;
 import com.vincent.amogha.modules.fund.BalanceRepository;
 import com.vincent.amogha.modules.fund.FundRepository;
 import com.vincent.amogha.modules.fund.FundRequest;
+import com.vincent.amogha.modules.settings.BillingConfig;
+import com.vincent.amogha.modules.settings.BillingConfigRepository;
 import com.vincent.amogha.modules.settings.CompanyRepository;
 import com.vincent.amogha.modules.settings.RatesRepository;
 import com.vincent.amogha.modules.transaction.TxnRepository;
@@ -29,11 +32,15 @@ public class StateController {
     private final TxnRepository txns;
     private final FundRepository funds;
     private final BalanceRepository balances;
+    private final CustomerRepository customers;
+    private final BillingConfigRepository billingConfig;
 
     public StateController(UserRepository users, CompanyRepository companies, RatesRepository rates,
-                           TxnRepository txns, FundRepository funds, BalanceRepository balances) {
+                           TxnRepository txns, FundRepository funds, BalanceRepository balances,
+                           CustomerRepository customers, BillingConfigRepository billingConfig) {
         this.users = users; this.companies = companies; this.rates = rates;
         this.txns = txns; this.funds = funds; this.balances = balances;
+        this.customers = customers; this.billingConfig = billingConfig;
     }
 
     @GetMapping
@@ -61,9 +68,14 @@ public class StateController {
         out.put("users", userList);
         out.put("company", companies.findById("company").orElse(null));
         out.put("rates", rates.findById("rates").orElse(null));
-        out.put("transactions", txns.findAllByOrderByDateDesc());
+        var allTxns = txns.findAllByOrderByDateDesc();
+        out.put("transactions", allTxns.stream().filter(t -> !t.deleted).toList());       // active only
+        out.put("deletedTransactions", isAdmin
+                ? allTxns.stream().filter(t -> t.deleted).toList() : java.util.List.of()); // recycle bin (admin)
         out.put("funds", fundList);
         out.put("balances", balanceMap);
+        out.put("customers", customers.findAllByOrderByCreatedAtDesc());  // shared to all staff
+        out.put("billingConfig", billingConfig.findById("billing").orElseGet(BillingConfig::defaults));
         return out;
     }
 

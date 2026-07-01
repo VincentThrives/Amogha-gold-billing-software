@@ -52,3 +52,49 @@ describe('FundsComponent request validation', () => {
     expect(toast.ok).toHaveBeenCalled();
   });
 });
+
+describe('FundsComponent admin approval (payment method)', () => {
+  let cmp: FundsComponent;
+  let toast: jasmine.SpyObj<ToastService>;
+  let decideFund: jasmine.Spy;
+  const REQ = { id: 'fr1', employeeId: 'u-emp1', employeeName: 'Counter Staff', amount: 5000, note: '', status: 'pending', requestedAt: '' } as any;
+
+  beforeEach(() => {
+    decideFund = jasmine.createSpy('decideFund').and.resolveTo(undefined);
+    const store = {
+      isAdmin: () => true,
+      me: () => ({ id: 'u-admin', name: 'Admin', role: 'admin', phone: '9999900001' }),
+      funds: signal([REQ]),
+      users: signal([{ id: 'u-emp1', name: 'Counter Staff', role: 'employee', phone: '9999900002' }]),
+      userById: () => ({ id: 'u-emp1', name: 'Counter Staff' }),
+      balanceOf: () => 0,
+      addFundRequest: jasmine.createSpy().and.resolveTo(undefined),
+      decideFund,
+    };
+    toast = jasmine.createSpyObj('ToastService', ['err', 'ok', 'show']);
+    TestBed.configureTestingModule({
+      imports: [FundsComponent],
+      providers: [{ provide: StoreService, useValue: store }, { provide: ToastService, useValue: toast }],
+    });
+    cmp = TestBed.createComponent(FundsComponent).componentInstance;
+  });
+
+  it('blocks approval until a payment method is selected', async () => {
+    await cmp.approve(REQ);
+    expect(toast.err).toHaveBeenCalledWith(jasmine.stringMatching(/how the funds were given/));
+    expect(decideFund).not.toHaveBeenCalled();
+  });
+
+  it('approves with the chosen method + reference', async () => {
+    cmp.payout('fr1').method = 'NEFT';
+    cmp.payout('fr1').reference = 'UTR-9';
+    await cmp.approve(REQ);
+    expect(decideFund).toHaveBeenCalledWith('fr1', true, 'NEFT', 'UTR-9');
+    expect(toast.ok).toHaveBeenCalledWith('Funds approved.');
+  });
+
+  it('reject does not require a method', async () => {
+    await cmp.reject(REQ);
+    expect(decideFund).toHaveBeenCalledWith('fr1', false);
+  });
+});

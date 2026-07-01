@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { inr } from '../../core/calc';
 
@@ -13,5 +13,12 @@ import { inr } from '../../core/calc';
 })
 export class NewTransactionSelectComponent {
   store = inject(StoreService);
+  private route = inject(ActivatedRoute);
+
+  // carried through to the bill when starting from a registered customer
+  customerId = this.route.snapshot.queryParamMap.get('customerId');
+  customerName = this.customerId ? (this.store.customerById(this.customerId)?.name ?? '') : '';
+  get query() { return this.customerId ? { customerId: this.customerId } : {}; }
+
   rateLabel(v: number) { return v ? inr(v, 0) + '/g' : 'not set'; }
 }

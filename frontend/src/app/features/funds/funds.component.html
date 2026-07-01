@@ -1,26 +1,34 @@
 @if (store.isAdmin()) {
   <!-- ADMIN -->
-  <div class="page-head"><div><h2>Add Funds — Approvals</h2><p>Approve or reject employee fund requests</p></div></div>
+  <div class="page-head"><div><h2>Fund Approvals</h2><p>Record how you paid the staff, then approve</p></div></div>
 
   <div class="card">
     <h3>Pending Requests ({{ pending().length }})</h3>
     @if (!pending().length) { <div class="empty"><i class="fa-solid fa-wallet"></i>No pending requests.</div> }
     @else {
-      <div class="table-wrap"><table>
-        <thead><tr><th>Employee</th><th>Amount</th><th>Note</th><th>Requested</th><th></th></tr></thead>
-        <tbody>
-          @for (f of pending(); track f.id) {
-            <tr>
-              <td>{{ empName(f.employeeId) }}</td><td><b>{{ inr0(f.amount) }}</b></td>
-              <td>{{ f.note || '—' }}</td><td>{{ date(f.requestedAt) }}</td>
-              <td class="right">
-                <button class="btn btn-sm btn-ok" (click)="decide(f, true)">Approve</button>
-                <button class="btn btn-sm btn-err" (click)="decide(f, false)">Reject</button>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table></div>
+      @for (f of pending(); track f.id) {
+        <div class="fund-row">
+          <div class="fund-info">
+            <div><b>{{ empName(f.employeeId) }}</b> — <b class="amt">{{ inr0(f.amount) }}</b></div>
+            <div class="muted">{{ f.note || 'no note' }} · {{ date(f.requestedAt) }}</div>
+          </div>
+          <div class="field">
+            <label>Paid via <span class="req">*</span></label>
+            <select [id]="'fr_method_' + f.id" [(ngModel)]="payout(f.id).method">
+              <option value="" disabled>Select…</option>
+              @for (m of METHODS; track m) { <option [value]="m">{{ m }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label>Reference / Txn no. (optional)</label>
+            <input placeholder="UTR / UPI ref / cheque no." [(ngModel)]="payout(f.id).reference">
+          </div>
+          <div class="fund-actions">
+            <button class="btn btn-sm btn-ok" [disabled]="busy()" (click)="approve(f)"><i class="fa-solid fa-check"></i> Approve</button>
+            <button class="btn btn-sm btn-err" [disabled]="busy()" (click)="reject(f)"><i class="fa-solid fa-xmark"></i> Reject</button>
+          </div>
+        </div>
+      }
     }
   </div>
 
@@ -44,12 +52,13 @@
     @if (!store.funds().length) { <div class="empty"><i class="fa-solid fa-wallet"></i>No requests.</div> }
     @else {
       <div class="table-wrap"><table>
-        <thead><tr><th>Employee</th><th>Amount</th><th>Note</th><th>Status</th><th>Requested</th></tr></thead>
+        <thead><tr><th>Employee</th><th>Amount</th><th>Note</th><th>Status</th><th>Paid via</th><th>Reference</th><th>Requested</th></tr></thead>
         <tbody>
           @for (f of store.funds(); track f.id) {
             <tr>
               <td>{{ empName(f.employeeId) }}</td><td><b>{{ inr0(f.amount) }}</b></td><td>{{ f.note || '—' }}</td>
-              <td><span class="badge" [ngClass]="f.status">{{ f.status }}</span></td><td>{{ date(f.requestedAt) }}</td>
+              <td><span class="badge" [ngClass]="f.status">{{ f.status }}</span></td>
+              <td>{{ f.method || '—' }}</td><td>{{ f.reference || '—' }}</td><td>{{ date(f.requestedAt) }}</td>
             </tr>
           }
         </tbody>
@@ -76,12 +85,13 @@
     @if (!store.funds().length) { <div class="empty"><i class="fa-solid fa-wallet"></i>No requests.</div> }
     @else {
       <div class="table-wrap"><table>
-        <thead><tr><th>Amount</th><th>Note</th><th>Status</th><th>Requested</th></tr></thead>
+        <thead><tr><th>Amount</th><th>Note</th><th>Status</th><th>Paid via</th><th>Reference</th><th>Requested</th></tr></thead>
         <tbody>
           @for (f of store.funds(); track f.id) {
             <tr>
               <td><b>{{ inr0(f.amount) }}</b></td><td>{{ f.note || '—' }}</td>
-              <td><span class="badge" [ngClass]="f.status">{{ f.status }}</span></td><td>{{ date(f.requestedAt) }}</td>
+              <td><span class="badge" [ngClass]="f.status">{{ f.status }}</span></td>
+              <td>{{ f.method || '—' }}</td><td>{{ f.reference || '—' }}</td><td>{{ date(f.requestedAt) }}</td>
             </tr>
           }
         </tbody>

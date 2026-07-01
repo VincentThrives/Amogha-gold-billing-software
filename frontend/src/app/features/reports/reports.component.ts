@@ -1,73 +1,60 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Chart, registerables } from 'chart.js';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
-import { inr } from '../../core/calc';
+import { inr, billDate } from '../../core/calc';
+import { Txn } from '../../core/models';
 
-Chart.register(...registerables);
-
-interface MonthRow { label: string; count: number; gold: number; silver: number; total: number; }
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${('0' + (d.getMonth() + 1)).slice(-2)}-${('0' + d.getDate()).slice(-2)}`;
+}
+function monthStartISO(): string {
+  const d = new Date(); d.setDate(1);
+  return `${d.getFullYear()}-${('0' + (d.getMonth() + 1)).slice(-2)}-01`;
+}
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.scss',
 })
-export class ReportsComponent implements AfterViewInit, OnDestroy {
+export class ReportsComponent {
   private store = inject(StoreService);
-  @ViewChild('dayCanvas') dayCanvas!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('weekCanvas') weekCanvas!: ElementRef<HTMLCanvasElement>;
 
-  private charts: Chart[] = [];
-  hasData = this.store.transactions().length > 0;
-  hasToday = false;
-  monthRows: MonthRow[] = [];
+  from = signal(todayISO());
+  to = signal(todayISO());
+
   inr0 = (n: number) => inr(n, 0);
+  date = (iso: string) => billDate(iso);
 
-  ngAfterViewInit() {
-    const txns = this.store.transactions();
+  // admins see every sale; an employee sees only the bills they handled
+  mineOnly = computed(() => !this.store.isAdmin());
 
-    // today doughnut by metal
-    const start = new Date(); start.setHours(0, 0, 0, 0);
-    let dg = 0, ds = 0;
-    txns.forEach(t => { if (new Date(t.date) >= start) { t.metal === 'gold' ? dg += t.totals.amountPayable : ds += t.totals.amountPayable; } });
-    this.hasToday = dg + ds > 0;
-    if (this.hasToday) {
-      this.charts.push(new Chart(this.dayCanvas.nativeElement, {
-        type: 'doughnut',
-        data: { labels: ['Gold', 'Silver'], datasets: [{ data: [dg, ds], backgroundColor: ['#c79a3b', '#9aa3ad'] }] },
-        options: { plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => `${c.label}: ${this.inr0(c.parsed)}` } } } },
-      }));
+  /** approved (non-deleted) bills whose date falls within [from, to] inclusive */
+  rows = computed<Txn[]>(() => {
+    const from = new Date(this.from() + 'T00:00:00').getTime();
+    const to = new Date(this.to() + 'T23:59:59.999').getTime();
+    const meId = this.store.me()?.id;
+    const mine = this.mineOnly();
+    return this.store.transactions()
+      .filter(t => t.status === 'approved')
+      .filter(t => !mine || t.employeeId === meId)
+      .filter(t => { const d = new Date(t.date).getTime(); return d >= from && d <= to; });
+  });
+
+  summary = computed(() => {
+    let goldG = 0, goldAmt = 0, silverG = 0, silverAmt = 0;
+    for (const t of this.rows()) {
+      if (t.metal === 'gold') { goldG += t.totals.netWeight; goldAmt += t.totals.amountPayable; }
+      else { silverG += t.totals.netWeight; silverAmt += t.totals.amountPayable; }
     }
+    return { goldG, goldAmt, silverG, silverAmt, total: goldAmt + silverAmt, count: this.rows().length };
+  });
 
-    // weekly bar (last 7 days payouts)
-    const labels: string[] = [], data: number[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
-      const next = new Date(d); next.setDate(d.getDate() + 1);
-      const sum = txns.reduce((s, t) => { const td = new Date(t.date); return s + (td >= d && td < next ? t.totals.amountPayable : 0); }, 0);
-      labels.push(d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }));
-      data.push(Math.round(sum));
-    }
-    this.charts.push(new Chart(this.weekCanvas.nativeElement, {
-      type: 'bar',
-      data: { labels, datasets: [{ label: 'Payout (₹)', data, backgroundColor: '#561a70', borderRadius: 6 }] },
-      options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => '₹' + Number(v).toLocaleString('en-IN') } } } },
-    }));
-
-    // monthly table (last months)
-    const months: Record<string, MonthRow> = {};
-    txns.forEach(t => {
-      const d = new Date(t.date);
-      const key = `${d.getFullYear()}-${('0' + (d.getMonth() + 1)).slice(-2)}`;
-      if (!months[key]) months[key] = { label: d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }), count: 0, gold: 0, silver: 0, total: 0 };
-      months[key].count++; months[key].total += t.totals.amountPayable;
-      months[key][t.metal] += t.totals.amountPayable;
-    });
-    this.monthRows = Object.keys(months).sort().reverse().map(k => months[k]);
-  }
-
-  ngOnDestroy() { this.charts.forEach(c => c.destroy()); }
+  setToday() { this.from.set(todayISO()); this.to.set(todayISO()); }
+  setMonth() { this.from.set(monthStartISO()); this.to.set(todayISO()); }
 }

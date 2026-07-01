@@ -1,0 +1,26 @@
+<div class="page-head">
+  <div><h2>Bill Approvals</h2><p>Review, edit &amp; approve staff bills</p></div>
+</div>
+
+@if (!pending().length) {
+  <div class="card"><div class="empty"><i class="fa-solid fa-circle-check"></i>No bills waiting for approval.</div></div>
+} @else {
+  @for (t of pending(); track t.id) {
+    <div class="card appr">
+      <div class="appr-head">
+        <div>
+          <div class="appr-cust">{{ t.customer.name }} <span class="badge silver">{{ t.metal }}</span></div>
+          <div class="muted">Bill {{ t.billNo }} · by {{ t.employeeName }} · {{ date(t.date) }}</div>
+          <div class="muted" style="margin-top:2px">{{ itemsSummary(t) }}</div>
+        </div>
+        <div class="right">
+          <div class="muted" style="font-size:11.5px">GROSS</div>
+          <div class="appr-gross">{{ inr0(t.totals.grossAmount) }}</div>
+        </div>
+      </div>
+      <div class="appr-foot">
+        <a class="btn btn-gold" [routerLink]="['/approvals', t.id]"><i class="fa-solid fa-pen-to-square"></i> Edit &amp; Approve</a>
+      </div>
+    </div>
+  }
+}

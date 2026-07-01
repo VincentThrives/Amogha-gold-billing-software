@@ -1,12 +1,28 @@
 <div class="page-head">
   <div><h2>Transaction List</h2>
-    <p>Most recent sale per customer ({{ store.latestTxns().length }} customer{{ store.latestTxns().length === 1 ? '' : 's' }})</p></div>
+    <p>{{ store.isAdmin() ? 'All bills' : 'Your bills' }} given to customers ({{ all().length }})</p></div>
   <a routerLink="/new" class="btn btn-gold"><i class="fa-solid fa-plus"></i> New Transaction</a>
 </div>
-<p class="hintline" style="margin-bottom:12px">
-  <i class="fa-solid fa-circle-info"></i> Only the latest transaction of each customer is shown here.
-  Use the Dashboard search to see a customer's full history.
-</p>
+
 <div class="card">
-  <app-txn-table [rows]="store.latestTxns()"></app-txn-table>
+  <h3><i class="fa-solid fa-magnifying-glass"></i> Search</h3>
+  <div class="searchbar">
+    <div class="field" style="max-width:170px"><label>Search by</label>
+      <select [ngModel]="searchType()" (ngModelChange)="searchType.set($event)">
+        <option value="all">Name / Phone / Bill ID</option>
+        <option value="name">Customer Name</option>
+        <option value="phone">Phone Number</option>
+        <option value="bill">Bill ID</option>
+      </select>
+    </div>
+    <div class="field"><label>Search term</label>
+      <input placeholder="Type a name, phone or bill ID…" [ngModel]="term()" (ngModelChange)="term.set($event)" autocomplete="off">
+    </div>
+    <button class="btn btn-ghost" (click)="clear()">Clear</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>{{ term() ? results().length + ' result' + (results().length === 1 ? '' : 's') : 'All Transactions' }}</h3>
+  <app-txn-table [rows]="results()"></app-txn-table>
 </div>

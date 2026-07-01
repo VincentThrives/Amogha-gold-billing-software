@@ -1,2 +1,20 @@
 :host { display: block; }
-canvas { max-height: 260px; }
+
+.range { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+.range .field { margin: 0; }
+.range-presets { display: flex; gap: 8px; }
+
+.report-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+.rep-card {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 18px; box-shadow: var(--shadow); border-top: 4px solid var(--line);
+}
+.rep-card.gold-c { border-top-color: var(--gold); }
+.rep-card.silver-c { border-top-color: #9aa3ad; }
+.rep-card.total-c { border-top-color: var(--purple); }
+.rep-metal { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.rep-grams { font-size: 26px; font-weight: 700; color: var(--purple); margin: 6px 0 2px; }
+.rep-amt { font-size: 13px; color: var(--muted); }
+.rep-amt b { color: var(--ink); }
+
+@media (max-width: 700px) { .report-cards { grid-template-columns: 1fr; } }

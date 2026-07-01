@@ -13,6 +13,7 @@ function txn(over: Partial<Txn>): Txn {
     idProofs: over.idProofs || [], reference: over.reference || {}, selfie: null,
     clientOtpVerified: false, article: '', items: [],
     totals: { grossAmount: 0, margin: 0, netAmount: 0, billingCharges: 0, amountPayable: 1000, netWeight: 0 },
+    status: 'approved',
     ...over,
   } as Txn;
 }

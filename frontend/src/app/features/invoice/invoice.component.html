@@ -7,6 +7,9 @@
       <a routerLink="/dashboard" class="btn btn-ghost">&larr; Back</a>
       <button class="btn btn-purple" (click)="print()"><i class="fa-solid fa-print"></i> Print</button>
       <button class="btn btn-gold" [disabled]="busy()" (click)="downloadPdf()"><i class="fa-solid fa-download"></i> Download PDF</button>
+      @if (store.isAdmin() && txn.status === 'approved' && !txn.deleted) {
+        <button class="btn btn-err" [disabled]="busy()" (click)="deleteBill()"><i class="fa-solid fa-trash"></i> Delete</button>
+      }
     </div>
   </div>
 

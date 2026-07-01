@@ -1,11 +1,12 @@
-<div class="page-head"><div><h2>New Transaction</h2><p>What is the customer selling?</p></div></div>
+<div class="page-head"><div><h2>New Transaction</h2>
+  <p>@if (customerName) { Billing <b>{{ customerName }}</b> — } What is the customer selling?</p></div></div>
 
 <div class="metal-pick">
-  <a class="metal-card gold-c" [routerLink]="['/new', 'gold']">
+  <a class="metal-card gold-c" [routerLink]="['/new', 'gold']" [queryParams]="query">
     <i class="fa-solid fa-coins"></i><h3>Gold</h3>
     <p class="muted">Rate {{ rateLabel(store.rates().gold) }}</p>
   </a>
-  <a class="metal-card silver-c" [routerLink]="['/new', 'silver']">
+  <a class="metal-card silver-c" [routerLink]="['/new', 'silver']" [queryParams]="query">
     <i class="fa-solid fa-coins"></i><h3>Silver</h3>
     <p class="muted">Rate {{ rateLabel(store.rates().silver) }}</p>
   </a>

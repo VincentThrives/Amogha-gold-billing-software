@@ -1,2 +1,17 @@
 :host { display: block; }
 .btn-sm + .btn-sm { margin-left: 6px; }
+
+.fund-row {
+  display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+  &:last-child { border-bottom: 0; }
+  .field { margin: 0; }
+  .fund-info { flex: 1; min-width: 170px; align-self: center; }
+  .amt { color: var(--purple); }
+  select { min-width: 130px; }
+  .fund-actions { display: flex; gap: 8px; margin-left: auto; }
+}
+@media (max-width: 560px) {
+  .fund-row .field, .fund-row select, .fund-row input { width: 100%; }
+  .fund-row .fund-actions { margin-left: 0; width: 100%; .btn { flex: 1; justify-content: center; } }
+}

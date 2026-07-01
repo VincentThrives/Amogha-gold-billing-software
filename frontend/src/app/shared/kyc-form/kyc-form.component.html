@@ -1,0 +1,82 @@
+<!-- ID proof -->
+<div class="card">
+  <h3><i class="fa-solid fa-id-card"></i> ID Proof <span class="req">*</span>
+    <small class="muted">(select at least one; add more if available)</small></h3>
+  <div class="chk-grid" id="idTypes">
+    @for (t of ID_TYPES; track t) {
+      <label class="chk" [class.on]="model.selectedIds.includes(t)">
+        <input type="checkbox" [checked]="model.selectedIds.includes(t)" (change)="toggleId(t)"> {{ t }}
+      </label>
+    }
+  </div>
+  @if (selectedIdList.length) {
+    <div class="grid grid-2" style="margin-top:12px">
+      @for (t of selectedIdList; track t) {
+        <div class="field">
+          <label>{{ t }} Number</label>
+          <input [id]="'idnum_' + idSlug(t)" class="id-number-input" [placeholder]="t + ' document no.'" [(ngModel)]="model.idNumbers[t]">
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Seller / Customer details -->
+<div class="card">
+  <h3><i class="fa-solid fa-user"></i> Customer Details</h3>
+  <div class="grid grid-3">
+    <div class="field"><label>Full Name <span class="req">*</span></label><input id="f_name" [(ngModel)]="model.name"></div>
+    <div class="field"><label>Date of Birth</label><input id="f_dob" type="date" [(ngModel)]="model.dob"></div>
+    <div class="field"><label>Phone Number <span class="req">*</span></label>
+      <input id="f_phone" inputmode="numeric" maxlength="10" placeholder="10-digit" [ngModel]="model.phone" (ngModelChange)="onDigits('phone', $event)"></div>
+  </div>
+  <div class="grid grid-2">
+    <div class="field"><label>Address <span class="req">*</span></label><textarea id="f_addr1" [(ngModel)]="model.addr1"></textarea></div>
+    <div class="field"><label>Address line 2 (optional)</label><textarea id="f_addr2" [(ngModel)]="model.addr2"></textarea></div>
+  </div>
+  <div class="grid grid-2">
+    <div class="field"><label>PIN Code <span class="req">*</span></label>
+      <input id="f_pin" inputmode="numeric" maxlength="6" [ngModel]="model.pin" (ngModelChange)="onDigits('pin', $event)"></div>
+    <div class="field"><label>Landmark</label><input id="f_landmark" [(ngModel)]="model.landmark"></div>
+  </div>
+</div>
+
+<!-- Reference -->
+<div class="card">
+  <h3><i class="fa-solid fa-people-arrows"></i> Reference Details</h3>
+  <div class="grid grid-4">
+    <div class="field"><label>Reference Number</label><input [(ngModel)]="model.refNumber"></div>
+    <div class="field"><label>Relationship</label><input placeholder="e.g. Brother" [(ngModel)]="model.refRel"></div>
+    <div class="field"><label>Reference Phone</label>
+      <input inputmode="numeric" maxlength="10" [ngModel]="model.refPhone" (ngModelChange)="onDigits('refPhone', $event)"></div>
+    <div class="field"><label>Reference Address</label><input [(ngModel)]="model.refAddr"></div>
+  </div>
+</div>
+
+<!-- Selfie + OTP -->
+<div class="card">
+  <h3><i class="fa-solid fa-camera"></i> Selfie &amp; Verification <small class="muted">(both optional)</small></h3>
+  <div class="row" style="align-items:flex-start">
+    <div>
+      <label>Customer selfie photo (optional)</label>
+      <input type="file" accept="image/*" capture="user" style="max-width:260px" (change)="onSelfie($event)">
+      @if (model.selfie) { <div style="margin-top:8px"><img [src]="model.selfie" class="selfie-prev"></div> }
+    </div>
+    <div style="min-width:240px">
+      <label>Client OTP verification (optional)</label>
+      <div class="row">
+        <button type="button" class="btn btn-sm btn-ghost" (click)="genClientOtp()">Generate OTP</button>
+        @if (clientOtp()) { <span class="muted" style="font-size:13px">OTP: {{ clientOtp() }}</span> }
+      </div>
+      @if (clientOtp()) {
+        <div class="row" style="margin-top:8px">
+          <input placeholder="Enter OTP" style="max-width:140px" inputmode="numeric" maxlength="6" [(ngModel)]="clientOtpInput">
+          <button type="button" class="btn btn-sm btn-purple" (click)="verifyClientOtp()">Verify</button>
+          @if (model.clientOtpVerified) { <span class="badge approved">verified</span> }
+          @else if (clientOtpInput) { <span class="badge rejected">not verified</span> }
+        </div>
+      }
+      <p class="hintline">If the customer agrees, generate &amp; verify. If they decline, leave it &mdash; it is not mandatory.</p>
+    </div>
+  </div>
+</div>

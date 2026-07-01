@@ -131,27 +131,141 @@ class ApiIntegrationTest {
         Map r = call(HttpMethod.POST, "/api/transactions", bill(5000), admin()).getBody();
         assertTrue(((String) r.get("billNo")).matches("\\d{4}[0-9A-F]{6}"));
     }
-    @Test void employeeZeroBalanceBlocked() {
-        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/transactions", bill(5000), employee());
-        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
-        assertTrue(((String) r.getBody().get("error")).contains("Insufficient funds"));
-    }
-
-    // ---------- FUNDS ----------
-    @Test void fundWorkflow_requestApproveBillDebit() {
-        String adminT = admin(), empT = employee();
-        Map fr = call(HttpMethod.POST, "/api/funds", Map.of("amount", 10000, "note", "float"), empT).getBody();
-        assertEquals("pending", fr.get("status"));
-        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/funds/" + fr.get("id") + "/decide", Map.of("approve", true), adminT).getStatusCode());
-
+    @Test void employeeSubmit_createsPendingWithoutFundBlockOrDebit() {
+        String empT = employee();
+        Map r = call(HttpMethod.POST, "/api/transactions", bill(5000), empT).getBody();
+        assertEquals("pending", r.get("status"));   // staff bills wait for admin approval
+        // no debit at submit even with zero balance
         Map s = call(HttpMethod.GET, "/api/state", null, empT).getBody();
         String empId = (String) ((Map) s.get("me")).get("id");
-        assertEquals(10000.0, ((Number) ((Map) s.get("balances")).get(empId)).doubleValue());
+        Object bal = ((Map) s.get("balances")).get(empId);
+        assertTrue(bal == null || ((Number) bal).doubleValue() == 0.0);
+    }
+    @Test void adminSubmit_createsApprovedImmediately() {
+        assertEquals("approved", call(HttpMethod.POST, "/api/transactions", bill(5000), admin()).getBody().get("status"));
+    }
+    @Test void employeeMarginAndChargesAreForcedToZeroAtSubmit() {
+        Map body = new java.util.HashMap<>(bill(6000));
+        body.put("totals", Map.of("margin", 500, "billingCharges", 999)); // staff tries to set them
+        Map r = call(HttpMethod.POST, "/api/transactions", body, employee()).getBody();
+        Map totals = (Map) r.get("totals");
+        assertEquals(0.0, ((Number) totals.get("margin")).doubleValue());
+        assertEquals(0.0, ((Number) totals.get("billingCharges")).doubleValue());
+    }
 
-        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getStatusCode());
-        s = call(HttpMethod.GET, "/api/state", null, empT).getBody();
-        assertEquals(4000.0, ((Number) ((Map) s.get("balances")).get(empId)).doubleValue());
-        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/transactions", bill(5000), empT).getStatusCode());
+    // ---------- APPROVAL ----------
+    private void fund(String empT, String adminT, int amount) {
+        Map fr = call(HttpMethod.POST, "/api/funds", Map.of("amount", amount), empT).getBody();
+        call(HttpMethod.POST, "/api/funds/" + fr.get("id") + "/decide", Map.of("approve", true, "method", "Cash"), adminT);
+    }
+    @Test void approval_appliesChargesDebitsFundsAndFinalises() {
+        String adminT = admin(), empT = employee();
+        fund(empT, adminT, 10000);
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
+        Map approved = call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/approve",
+                Map.of("margin", 0, "billingCharges", 100), adminT).getBody();
+        assertEquals("approved", approved.get("status"));
+        assertEquals(5900L, ((Number) ((Map) approved.get("totals")).get("amountPayable")).longValue()); // 6000 - 100
+        Map s = call(HttpMethod.GET, "/api/state", null, empT).getBody();
+        String empId = (String) ((Map) s.get("me")).get("id");
+        assertEquals(4100.0, ((Number) ((Map) s.get("balances")).get(empId)).doubleValue()); // 10000 - 5900
+    }
+    @Test void approval_adminEditsItemsAndRateRecomputesTotals() {
+        String adminT = admin(), empT = employee();
+        fund(empT, adminT, 500000);
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
+        // admin edits the 24crt rate 600 -> 1200 (net 10 x 1200 x 100% = 12000), charges 100
+        Map editedItem = Map.of("article", "NECKLACE", "gross", 10, "stone", 0, "other", 0, "purity", 100, "rate", 1200);
+        Map approved = call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/approve",
+                Map.of("items", List.of(editedItem), "margin", 0, "billingCharges", 100), adminT).getBody();
+        assertEquals(12000.0, ((Number) ((Map) approved.get("totals")).get("grossAmount")).doubleValue());
+        assertEquals(11900L, ((Number) ((Map) approved.get("totals")).get("amountPayable")).longValue()); // 12000 - 100
+        assertEquals(1200.0, ((Number) ((Map) ((List) approved.get("items")).get(0)).get("rate")).doubleValue());
+        Map s = call(HttpMethod.GET, "/api/state", null, empT).getBody();
+        String empId = (String) ((Map) s.get("me")).get("id");
+        assertEquals(488100.0, ((Number) ((Map) s.get("balances")).get(empId)).doubleValue()); // 500000 - 11900
+    }
+    @Test void approval_blockedWhenStaffFundsInsufficient() {
+        String adminT = admin(), empT = employee();
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
+        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/approve",
+                Map.of("margin", 0, "billingCharges", 0), adminT);
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        assertTrue(((String) r.getBody().get("error")).contains("insufficient funds"));
+    }
+    @Test void employeeCannotApprove() {
+        String empT = employee();
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/approve",
+                Map.of("margin", 0, "billingCharges", 0), empT).getStatusCode());
+    }
+    // ---------- SOFT DELETE / RECYCLE BIN ----------
+    @Test void softDelete_removesFromActiveAddsToRecycleAndRefundsStaff() {
+        String adminT = admin(), empT = employee();
+        fund(empT, adminT, 10000);
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
+        call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/approve", Map.of("margin", 0, "billingCharges", 0), adminT);
+        // approved → staff debited 6000 (balance 4000)
+        String empId = (String) ((Map) call(HttpMethod.GET, "/api/state", null, empT).getBody().get("me")).get("id");
+        // delete
+        call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/delete", Map.of(), adminT);
+        Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        assertTrue(((List) s.get("transactions")).isEmpty());                 // gone from active
+        assertEquals(1, ((List) s.get("deletedTransactions")).size());        // in recycle bin
+        assertEquals(10000.0, ((Number) ((Map) s.get("balances")).get(empId)).doubleValue()); // funds refunded
+    }
+    @Test void restore_bringsBackAndReDebits() {
+        String adminT = admin(), empT = employee();
+        fund(empT, adminT, 10000);
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
+        call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/approve", Map.of("margin", 0, "billingCharges", 0), adminT);
+        call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/delete", Map.of(), adminT);
+        call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/restore", Map.of(), adminT);
+        Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        assertEquals(1, ((List) s.get("transactions")).size());               // back to active
+        assertTrue(((List) s.get("deletedTransactions")).isEmpty());
+        assertEquals(4000.0, ((Number) ((Map) s.get("balances")).get("u-emp1")).doubleValue()); // re-debited
+    }
+    @Test void purge_onlyFromRecycleBin() {
+        String adminT = admin();
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(5000), adminT).getBody(); // admin bill, approved
+        // cannot purge an active bill
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.DELETE, "/api/transactions/" + t.get("id"), null, adminT).getStatusCode());
+        // delete then purge
+        call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/delete", Map.of(), adminT);
+        assertEquals(HttpStatus.OK, call(HttpMethod.DELETE, "/api/transactions/" + t.get("id"), null, adminT).getStatusCode());
+        Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        assertTrue(((List) s.get("deletedTransactions")).isEmpty());          // gone forever
+    }
+    @Test void pendingBillCannotBeDeleted() {
+        String adminT = admin(), empT = employee();
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody(); // pending
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/delete", Map.of(), adminT).getStatusCode());
+    }
+    @Test void employeeCannotDeleteBills() {
+        String adminT = admin(), empT = employee();
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(5000), adminT).getBody();
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/delete", Map.of(), empT).getStatusCode());
+    }
+
+    @Test void rejectSetsStatusRejected() {
+        String adminT = admin(), empT = employee();
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
+        assertEquals("rejected", call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/reject", Map.of(), adminT).getBody().get("status"));
+    }
+
+    // ---------- BILLING CONFIG ----------
+    @Test void billingConfig_defaultsToHundredAndIsUpdatable() {
+        String adminT = admin();
+        Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        assertEquals(100.0, ((Number) ((Map) s.get("billingConfig")).get("defaultBillingCharges")).doubleValue());
+        call(HttpMethod.PUT, "/api/billing-config", Map.of("defaultMargin", 50, "defaultBillingCharges", 150), adminT);
+        s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        assertEquals(150.0, ((Number) ((Map) s.get("billingConfig")).get("defaultBillingCharges")).doubleValue());
+    }
+    @Test void employeeCannotSetBillingConfig() {
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.PUT, "/api/billing-config",
+                Map.of("defaultMargin", 0, "defaultBillingCharges", 100), employee()).getStatusCode());
     }
     @Test void rejectingFundDoesNotCredit() {
         String adminT = admin(), empT = employee();
@@ -167,8 +281,56 @@ class ApiIntegrationTest {
         Map fr = call(HttpMethod.POST, "/api/funds", Map.of("amount", 1000), empT).getBody();
         assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/funds/" + fr.get("id") + "/decide", Map.of("approve", true), empT).getStatusCode());
     }
+    @Test void approvingFundRequiresPaymentMethod() {
+        String adminT = admin(), empT = employee();
+        Map fr = call(HttpMethod.POST, "/api/funds", Map.of("amount", 5000), empT).getBody();
+        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/funds/" + fr.get("id") + "/decide", Map.of("approve", true), adminT);
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        assertTrue(((String) r.getBody().get("error")).contains("how the funds were given"));
+    }
+    @Test void approvingFundStoresMethodAndReference() {
+        String adminT = admin(), empT = employee();
+        Map fr = call(HttpMethod.POST, "/api/funds", Map.of("amount", 5000), empT).getBody();
+        call(HttpMethod.POST, "/api/funds/" + fr.get("id") + "/decide",
+                Map.of("approve", true, "method", "NEFT", "reference", "TXN12345"), adminT);
+        Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        Map decided = (Map) ((List<Map>) s.get("funds")).stream().filter(x -> fr.get("id").equals(x.get("id"))).findFirst().orElseThrow();
+        assertEquals("approved", decided.get("status"));
+        assertEquals("NEFT", decided.get("method"));
+        assertEquals("TXN12345", decided.get("reference"));
+    }
     @Test void adminCannotRequestFunds() {
         assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/funds", Map.of("amount", 1000), admin()).getStatusCode());
+    }
+
+    // ---------- CUSTOMERS ----------
+    private Map customerBody(String name, String phone) {
+        return Map.of("name", name, "phone", phone, "address1", "MG Road", "pincode", "560073",
+                "idProofs", List.of(Map.of("type", "PAN Card", "number", "ABCDE1234F")),
+                "reference", Map.of());
+    }
+    @Test void registerCustomer_succeedsAndAppearsInState() {
+        String t = admin();
+        Map res = call(HttpMethod.POST, "/api/customers", customerBody("Ravi", "9811122233"), t).getBody();
+        assertEquals(Boolean.FALSE, res.get("existed"));
+        List custs = (List) call(HttpMethod.GET, "/api/state", null, t).getBody().get("customers");
+        assertEquals(1, custs.size());
+    }
+    @Test void registerCustomer_duplicatePhoneUpdatesAndFlagsExisted() {
+        String t = admin();
+        call(HttpMethod.POST, "/api/customers", customerBody("Ravi", "9811122233"), t);
+        Map res = call(HttpMethod.POST, "/api/customers", customerBody("Ravi Kumar", "9811122233"), t).getBody();
+        assertEquals(Boolean.TRUE, res.get("existed"));
+        List custs = (List) call(HttpMethod.GET, "/api/state", null, t).getBody().get("customers");
+        assertEquals(1, custs.size());  // updated, not duplicated
+        assertEquals("Ravi Kumar", ((Map) custs.get(0)).get("name"));
+    }
+    @Test void registerCustomer_requiresIdProof() {
+        Map noId = Map.of("name", "X", "phone", "9811122233", "address1", "A", "pincode", "560073", "reference", Map.of());
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/customers", noId, admin()).getStatusCode());
+    }
+    @Test void registerCustomer_employeeCanRegister() {
+        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/customers", customerBody("Ravi", "9811122244"), employee()).getStatusCode());
     }
 
     // ---------- RESET ----------

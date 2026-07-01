@@ -12,12 +12,22 @@ public class SettingsController {
 
     private final RatesRepository rates;
     private final CompanyRepository companies;
+    private final BillingConfigRepository billingConfig;
 
-    public SettingsController(RatesRepository rates, CompanyRepository companies) {
-        this.rates = rates; this.companies = companies;
+    public SettingsController(RatesRepository rates, CompanyRepository companies, BillingConfigRepository billingConfig) {
+        this.rates = rates; this.companies = companies; this.billingConfig = billingConfig;
     }
 
     public record RateUpdate(double gold, double silver) {}
+    public record BillingConfigUpdate(double defaultMargin, double defaultBillingCharges) {}
+
+    @PutMapping("/billing-config")
+    public BillingConfig updateBillingConfig(@RequestBody BillingConfigUpdate body) {
+        BillingConfig c = BillingConfig.defaults();
+        c.defaultMargin = Math.max(0, body.defaultMargin());
+        c.defaultBillingCharges = Math.max(0, body.defaultBillingCharges());
+        return billingConfig.save(c);
+    }
 
     @PutMapping("/rates")
     public Rates updateRates(@RequestBody RateUpdate body, @AuthenticationPrincipal AmoghaPrincipal principal) {

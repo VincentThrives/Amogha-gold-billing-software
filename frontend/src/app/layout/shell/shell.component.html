@@ -11,6 +11,25 @@
         </a>
       }
       @if (store.isAdmin()) {
+        <a routerLink="/approvals" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+          <i class="fa-solid fa-file-circle-check"></i> Bill Approvals
+          @if (store.pendingTxns().length) { <span class="nav-badge">{{ store.pendingTxns().length }}</span> }
+        </a>
+        <a routerLink="/billing-defaults" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+          <i class="fa-solid fa-percent"></i> Billing Defaults
+        </a>
+        <a routerLink="/employees" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+          <i class="fa-solid fa-users"></i> Employees
+        </a>
+      }
+      <a routerLink="/reports" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+        <i class="fa-solid fa-chart-pie"></i> Reports
+      </a>
+      @if (store.isAdmin()) {
+        <a routerLink="/deleted" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+          <i class="fa-solid fa-trash-can"></i> Deleted Invoices
+          @if (store.deletedTransactions().length) { <span class="nav-badge">{{ store.deletedTransactions().length }}</span> }
+        </a>
         <a routerLink="/settings" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
           <i class="fa-solid fa-gear"></i> Settings
         </a>
@@ -21,12 +40,13 @@
   <div class="main">
     <header class="topbar">
       <button class="icon-btn" (click)="menuOpen.set(!menuOpen())"><i class="fa-solid fa-bars"></i></button>
-      <div class="topbar-info">
+      <a class="topbar-info" routerLink="/rate"
+         [title]="store.isAdmin() ? 'Set gold & silver rates' : 'View gold & silver rates'">
         <span class="rate-chip"><i class="fa-solid fa-coins"></i> Gold
           <b>{{ store.rates().gold ? inr0(store.rates().gold) : 'not set' }}</b>/g</span>
         <span class="rate-chip silver"><i class="fa-solid fa-coins"></i> Silver
           <b>{{ store.rates().silver ? inr0(store.rates().silver) : 'not set' }}</b>/g</span>
-      </div>
+      </a>
       <div class="topbar-right">
         @if (store.me()?.role === 'employee') {
           <span class="wallet-chip" title="Available billing funds">

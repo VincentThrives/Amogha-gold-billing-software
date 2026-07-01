@@ -1,0 +1,23 @@
+<div class="page-head">
+  <div><h2>Employees</h2><p>Add or remove counter staff</p></div>
+</div>
+
+<div class="card" style="max-width:640px">
+  <h3>Staff</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Name</th><th>Phone</th><th></th></tr></thead>
+    <tbody>
+      @for (e of employees(); track e.id) {
+        <tr><td>{{ e.name }}</td><td>{{ e.phone }}</td>
+          <td class="right"><button class="btn btn-sm btn-err" (click)="removeEmployee(e.id)">Remove</button></td></tr>
+      } @empty {
+        <tr><td colspan="3" class="muted center">No employees yet.</td></tr>
+      }
+    </tbody>
+  </table></div>
+  <div class="row" style="margin-top:12px">
+    <input id="emp_name" placeholder="Name" style="flex:1" [(ngModel)]="empName">
+    <input id="emp_phone" placeholder="10-digit phone" inputmode="numeric" maxlength="10" style="flex:1" [ngModel]="empPhone" (ngModelChange)="onEmpPhone($event)">
+    <button class="btn btn-purple" (click)="addEmployee()">Add Employee</button>
+  </div>
+</div>

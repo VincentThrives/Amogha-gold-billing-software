@@ -18,9 +18,13 @@ export class FundsComponent {
   store = inject(StoreService);
   private toast = inject(ToastService);
 
+  readonly METHODS = ['Cash', 'UPI', 'IMPS', 'NEFT', 'RTGS', 'Cheque'];
+
   amount: number | null = null;
   note = '';
   busy = signal(false);
+  // per-request payout details entered by the admin on approval
+  private payouts = new Map<string, { method: string; reference: string }>();
 
   inr0 = (n: number) => inr(n, 0);
   date = (iso: string) => billDate(iso);
@@ -28,6 +32,11 @@ export class FundsComponent {
   pending = computed(() => this.store.funds().filter(f => f.status === 'pending'));
   employees = computed(() => this.store.users().filter(u => u.role === 'employee'));
   empName = (id: string) => this.store.userById(id)?.name || '—';
+
+  payout(id: string) {
+    if (!this.payouts.has(id)) this.payouts.set(id, { method: '', reference: '' });
+    return this.payouts.get(id)!;
+  }
 
   async request() {
     const amt = Number(this.amount) || 0;
@@ -41,10 +50,25 @@ export class FundsComponent {
     finally { this.busy.set(false); }
   }
 
-  async decide(req: FundRequest, approve: boolean) {
+  async approve(req: FundRequest) {
+    const p = this.payout(req.id);
+    if (!p.method) {
+      this.toast.err('Select how the funds were given (Cash / UPI / NEFT / RTGS…).');
+      highlightField(document.getElementById('fr_method_' + req.id));
+      return;
+    }
+    this.busy.set(true);
     try {
-      await this.store.decideFund(req.id, approve);
-      this.toast.show(approve ? 'Approved.' : 'Rejected.', approve ? 'ok' : '');
+      await this.store.decideFund(req.id, true, p.method, p.reference.trim());
+      this.toast.ok('Funds approved.');
+    } catch (e: any) { this.toast.err(e?.error?.error || 'Could not approve.'); }
+    finally { this.busy.set(false); }
+  }
+
+  async reject(req: FundRequest) {
+    try {
+      await this.store.decideFund(req.id, false);
+      this.toast.show('Rejected.');
     } catch (e: any) { this.toast.err(e?.error?.error || 'Could not update request.'); }
   }
 }

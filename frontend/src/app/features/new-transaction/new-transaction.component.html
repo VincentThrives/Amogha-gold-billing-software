@@ -1,89 +1,43 @@
 <div class="page-head">
-  <div><h2>New {{ cap(metal) }} Transaction</h2><p>Fill seller KYC and item details, then generate the bill</p></div>
+  <div><h2>New {{ cap(metal) }} Transaction</h2><p>Select a registered customer, add item details, then generate the bill</p></div>
   <a routerLink="/new" class="btn btn-ghost">&larr; Back</a>
 </div>
 
-<!-- ID proof -->
+<!-- Registered customer to bill -->
 <div class="card">
-  <h3><i class="fa-solid fa-id-card"></i> ID Proof <span class="req">*</span>
-    <small class="muted">(select at least one; add more if available)</small></h3>
-  <div class="chk-grid" id="idTypes">
-    @for (t of ID_TYPES; track t) {
-      <label class="chk" [class.on]="selectedIds.has(t)">
-        <input type="checkbox" [checked]="selectedIds.has(t)" (change)="toggleId(t)"> {{ t }}
-      </label>
-    }
-  </div>
-  @if (selectedIdList.length) {
-    <div class="grid grid-2" style="margin-top:12px">
-      @for (t of selectedIdList; track t) {
-        <div class="field">
-          <label>{{ t }} Number</label>
-          <input class="id-number-input" [placeholder]="t + ' document no.'" [(ngModel)]="idNumbers[t]">
-        </div>
-      }
-    </div>
-  }
-</div>
+  <h3><i class="fa-solid fa-user-magnifying-glass"></i> Customer</h3>
 
-<!-- Seller -->
-<div class="card">
-  <h3><i class="fa-solid fa-user"></i> {{ cap(metal) }} Seller Details</h3>
-  <div class="grid grid-3">
-    <div class="field"><label>Full Name <span class="req">*</span></label><input id="f_name" [(ngModel)]="name"></div>
-    <div class="field"><label>Date of Birth</label><input id="f_dob" type="date" [(ngModel)]="dob"></div>
-    <div class="field"><label>Phone Number <span class="req">*</span></label>
-      <input id="f_phone" inputmode="numeric" maxlength="10" placeholder="10-digit" [ngModel]="phone" (ngModelChange)="onDigits('phone', $event)"></div>
-  </div>
-  <div class="grid grid-2">
-    <div class="field"><label>Address <span class="req">*</span></label><textarea id="f_addr1" [(ngModel)]="addr1"></textarea></div>
-    <div class="field"><label>Address line 2 (optional)</label><textarea id="f_addr2" [(ngModel)]="addr2"></textarea></div>
-  </div>
-  <div class="grid grid-2">
-    <div class="field"><label>PIN Code <span class="req">*</span></label>
-      <input id="f_pin" inputmode="numeric" maxlength="6" [ngModel]="pin" (ngModelChange)="onDigits('pin', $event)"></div>
-    <div class="field"><label>Landmark</label><input id="f_landmark" [(ngModel)]="landmark"></div>
-  </div>
-</div>
-
-<!-- Reference -->
-<div class="card">
-  <h3><i class="fa-solid fa-people-arrows"></i> Reference Details</h3>
-  <div class="grid grid-4">
-    <div class="field"><label>Reference Number</label><input [(ngModel)]="refNumber"></div>
-    <div class="field"><label>Relationship</label><input placeholder="e.g. Brother" [(ngModel)]="refRel"></div>
-    <div class="field"><label>Reference Phone</label>
-      <input inputmode="numeric" maxlength="10" [ngModel]="refPhone" (ngModelChange)="onDigits('refPhone', $event)"></div>
-    <div class="field"><label>Reference Address</label><input [(ngModel)]="refAddr"></div>
-  </div>
-</div>
-
-<!-- Selfie + OTP -->
-<div class="card">
-  <h3><i class="fa-solid fa-camera"></i> Selfie &amp; Verification <small class="muted">(both optional)</small></h3>
-  <div class="row" style="align-items:flex-start">
-    <div>
-      <label>Seller selfie photo (optional)</label>
-      <input type="file" accept="image/*" capture="user" style="max-width:260px" (change)="onSelfie($event)">
-      @if (selfie) { <div style="margin-top:8px"><img [src]="selfie" class="selfie-prev"></div> }
-    </div>
-    <div style="min-width:240px">
-      <label>Client OTP verification (optional)</label>
-      <div class="row">
-        <button type="button" class="btn btn-sm btn-ghost" (click)="genClientOtp()">Generate OTP</button>
-        @if (clientOtp()) { <span class="muted" style="font-size:13px">OTP: {{ clientOtp() }}</span> }
+  @if (selectedCustomer(); as c) {
+    <div class="cust-selected">
+      <div>
+        <div class="cust-name">{{ c.name }}</div>
+        <div class="muted">{{ c.phone }} · {{ c.address1 }}@if (c.pincode) {, PIN {{ c.pincode }}}</div>
+        @if (c.idProofs.length) {
+          <div class="muted" style="margin-top:2px">
+            @for (p of c.idProofs; track p.type) { <span class="badge gold" style="margin-right:6px">{{ p.type }}</span> }
+          </div>
+        }
       </div>
-      @if (clientOtp()) {
-        <div class="row" style="margin-top:8px">
-          <input placeholder="Enter OTP" style="max-width:140px" inputmode="numeric" maxlength="6" [(ngModel)]="clientOtpInput">
-          <button type="button" class="btn btn-sm btn-purple" (click)="verifyClientOtp()">Verify</button>
-          @if (clientOtpVerified()) { <span class="badge approved">verified</span> }
-          @else if (clientOtpInput) { <span class="badge rejected">not verified</span> }
-        </div>
-      }
-      <p class="hintline">If the seller agrees, generate &amp; verify. If they decline, leave it &mdash; it is not mandatory.</p>
+      <button type="button" class="btn btn-sm btn-ghost" (click)="clearCustomer()"><i class="fa-solid fa-rotate"></i> Change customer</button>
     </div>
-  </div>
+  } @else {
+    <div class="field" style="max-width:440px;position:relative">
+      <label>Search a registered customer by name or phone <span class="req">*</span></label>
+      <input id="cust_search" placeholder="Type a registered customer's name or phone…" [ngModel]="custSearch()" (ngModelChange)="custSearch.set($event)">
+      @if (custResults().length) {
+        <div class="cust-dropdown">
+          @for (c of custResults(); track c.id) {
+            <button type="button" class="cust-option" (click)="pickCustomer(c)">
+              <b>{{ c.name }}</b> <span class="muted">· {{ c.phone }}</span>
+            </button>
+          }
+        </div>
+      } @else if (custSearch().trim()) {
+        <div class="cust-dropdown"><div class="cust-empty muted">No registered customer matches. <a routerLink="/register">Register them first</a>.</div></div>
+      }
+    </div>
+    <p class="hintline">Only registered customers can be billed. <a routerLink="/register">Register a new customer</a> to add their KYC.</p>
+  }
 </div>
 
 <!-- Items -->
@@ -108,7 +62,13 @@
             <td><input type="number" min="0" step="0.01" style="width:80px" [(ngModel)]="it.other"></td>
             <td>{{ net(it).toFixed(2) }}</td>
             <td><input type="number" min="0" max="100" step="0.01" style="width:75px" [(ngModel)]="it.purity"></td>
-            <td><input [id]="'i_rate_' + $index" class="i_rate" type="number" min="0" step="0.01" style="width:95px" [(ngModel)]="it.rate"></td>
+            <td>
+              @if (store.isAdmin()) {
+                <input [id]="'i_rate_' + $index" class="i_rate" type="number" min="0" step="0.01" style="width:95px" [(ngModel)]="it.rate">
+              } @else {
+                <input [id]="'i_rate_' + $index" class="i_rate rate-locked" type="number" style="width:95px" [ngModel]="it.rate" readonly title="Rate is fixed by the admin">
+              }
+            </td>
             <td class="right">{{ inr2(amount(it)) }}</td>
             <td><button type="button" class="btn btn-sm btn-ghost" [disabled]="items().length === 1"
                   [title]="items().length === 1 ? 'At least one item is required' : 'Remove this item'"
@@ -122,26 +82,44 @@
     <button type="button" class="btn btn-sm btn-ghost" (click)="addItem(true)"><i class="fa-solid fa-plus"></i> Add item</button>
     <span class="hintline">{{ items().length }} item{{ items().length === 1 ? '' : 's' }} · net {{ totals().netWeight.toFixed(2) }} g</span>
   </div>
-  <p class="hintline">Each item needs its own name &amp; gross weight. Rate is pre-filled from the admin-set {{ metal }} rate ({{ fixedRate ? inr0(fixedRate) + '/g' : 'not set' }}) and can be edited per item.</p>
+  @if (store.isAdmin()) {
+    <p class="hintline">Each item needs its own name &amp; gross weight. Rate is pre-filled from the {{ metal }} rate ({{ fixedRate ? inr0(fixedRate) + '/g' : 'not set' }}) and can be edited per item.</p>
+  } @else if (fixedRate) {
+    <p class="hintline"><i class="fa-solid fa-lock"></i> {{ cap(metal) }} rate is fixed by the admin at {{ inr0(fixedRate) }}/g.</p>
+  } @else {
+    <p class="hintline err"><i class="fa-solid fa-triangle-exclamation"></i> {{ cap(metal) }} rate is not set — ask the admin to set it before billing.</p>
+  }
 </div>
 
 <!-- Charges + totals -->
 <div class="card">
   <h3><i class="fa-solid fa-receipt"></i> Charges &amp; Total</h3>
-  <div class="grid grid-2" style="max-width:520px">
-    <div class="field"><label>Margin (₹ deducted)</label><input type="number" min="0" [(ngModel)]="margin"></div>
-    <div class="field"><label>Billing Charges (₹ deducted)</label><input type="number" min="0" [(ngModel)]="charges"></div>
-  </div>
-  <div class="totbox" style="margin-top:14px">
-    <div class="line"><span>Gross Amount</span><b>{{ inr2(totals().grossAmount) }}</b></div>
-    <div class="line"><span>Margin</span><b>{{ inr2(totals().margin) }}</b></div>
-    <div class="line"><span>Net Amount</span><b>{{ inr2(totals().netAmount) }}</b></div>
-    <div class="line"><span>Billing Charges</span><b>{{ inr2(totals().billingCharges) }}</b></div>
-    <div class="line big"><span>Amount Payable</span><b>{{ inr0(totals().amountPayableRounded) }}</b></div>
-  </div>
+
+  @if (store.isAdmin()) {
+    <div class="grid grid-2" style="max-width:520px">
+      <div class="field"><label>Margin (₹ deducted)</label><input type="number" min="0" [(ngModel)]="margin"></div>
+      <div class="field"><label>Billing Charges (₹ deducted)</label><input type="number" min="0" [(ngModel)]="charges"></div>
+    </div>
+    <div class="totbox" style="margin-top:14px">
+      <div class="line"><span>Gross Amount</span><b>{{ inr2(totals().grossAmount) }}</b></div>
+      <div class="line"><span>Margin</span><b>{{ inr2(totals().margin) }}</b></div>
+      <div class="line"><span>Net Amount</span><b>{{ inr2(totals().netAmount) }}</b></div>
+      <div class="line"><span>Billing Charges</span><b>{{ inr2(totals().billingCharges) }}</b></div>
+      <div class="line big"><span>Amount Payable</span><b>{{ inr0(totals().amountPayableRounded) }}</b></div>
+    </div>
+  } @else {
+    <div class="totbox" style="margin-top:4px">
+      <div class="line big"><span>Gross Amount</span><b>{{ inr2(totals().grossAmount) }}</b></div>
+    </div>
+    <p class="hintline"><i class="fa-solid fa-circle-info"></i> Margin &amp; billing charges are applied by the admin when they approve this bill.</p>
+  }
 </div>
 
 <div class="row" style="justify-content:flex-end">
   <a routerLink="/new" class="btn btn-ghost">Cancel</a>
-  <button class="btn btn-gold" [disabled]="busy()" (click)="submit()"><i class="fa-solid fa-file-invoice-dollar"></i> Generate Bill</button>
+  @if (store.isAdmin()) {
+    <button class="btn btn-gold" [disabled]="busy()" (click)="submit()"><i class="fa-solid fa-file-invoice-dollar"></i> Generate Bill</button>
+  } @else {
+    <button class="btn btn-gold" [disabled]="busy()" (click)="submit()"><i class="fa-solid fa-paper-plane"></i> Send for Approval</button>
+  }
 </div>

@@ -16,6 +16,9 @@ const STATE: AppState = {
   ],
   funds: [],
   balances: { 'u-emp1': 5000 },
+  customers: [],
+  billingConfig: { defaultMargin: 0, defaultBillingCharges: 100 },
+  deletedTransactions: [],
 };
 
 describe('StoreService', () => {
@@ -90,9 +93,9 @@ describe('StoreService', () => {
   }));
 
   it('decideFund POSTs the decide endpoint', fakeAsync(() => {
-    store.decideFund('fr1', true);
+    store.decideFund('fr1', true, 'Cash', 'REF1');
     const req = http.expectOne(r => r.method === 'POST' && r.url === '/api/funds/fr1/decide');
-    expect(req.request.body).toEqual({ approve: true });
+    expect(req.request.body).toEqual({ approve: true, method: 'Cash', reference: 'REF1' });
     req.flush({});
     flushMicrotasks();
     flushState();

@@ -1,5 +1,7 @@
 package com.vincent.amogha.bootstrap;
 
+import com.vincent.amogha.modules.settings.BillingConfig;
+import com.vincent.amogha.modules.settings.BillingConfigRepository;
 import com.vincent.amogha.modules.settings.Company;
 import com.vincent.amogha.modules.settings.CompanyRepository;
 import com.vincent.amogha.modules.settings.Rates;
@@ -11,16 +13,17 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/** Seeds demo users, company details (real GSTIN) and empty rates on first boot. */
+/** Seeds demo users, company details (real GSTIN), empty rates and billing defaults on first boot. */
 @Component
 public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository users;
     private final CompanyRepository companies;
     private final RatesRepository rates;
+    private final BillingConfigRepository billingConfig;
 
-    public DataSeeder(UserRepository users, CompanyRepository companies, RatesRepository rates) {
-        this.users = users; this.companies = companies; this.rates = rates;
+    public DataSeeder(UserRepository users, CompanyRepository companies, RatesRepository rates, BillingConfigRepository billingConfig) {
+        this.users = users; this.companies = companies; this.rates = rates; this.billingConfig = billingConfig;
     }
 
     @Override
@@ -50,6 +53,9 @@ public class DataSeeder implements CommandLineRunner {
             Rates r = new Rates();
             r.id = "rates";
             rates.save(r);
+        }
+        if (billingConfig.findById("billing").isEmpty()) {
+            billingConfig.save(BillingConfig.defaults());   // default billing charges ₹100
         }
     }
 }

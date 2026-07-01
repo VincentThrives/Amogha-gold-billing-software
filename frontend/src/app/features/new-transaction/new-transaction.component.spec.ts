@@ -16,14 +16,18 @@ describe('NewTransactionComponent', () => {
 
   function build() {
     meSig = signal<User | null>({ id: 'u-admin', name: 'Amogha Admin', role: 'admin', phone: '9999900001' });
-    addTxn = jasmine.createSpy('addTxn').and.resolveTo({ id: 'txn-1', billNo: '1234ABCDEF' } as Txn);
+    addTxn = jasmine.createSpy('addTxn').and.resolveTo({ id: 'txn-1', billNo: '1234ABCDEF', status: 'approved' } as Txn);
     const store = {
       rates: signal({ gold: 8530, silver: 98, updatedAt: null, updatedBy: null }),
       me: meSig,
+      isAdmin: () => meSig()?.role === 'admin',
+      billingConfig: () => ({ defaultMargin: 0, defaultBillingCharges: 100 }),
       balanceOf: (_: string) => balance,
       genId: (p: string) => p + '-x',
       genBillNo: () => '1234ABCDEF',
       addTxn,
+      searchCustomers: (_: string) => [],
+      customerById: (_: string) => undefined,
     };
     toast = jasmine.createSpyObj('ToastService', ['err', 'ok', 'show']);
     TestBed.configureTestingModule({
@@ -32,7 +36,7 @@ describe('NewTransactionComponent', () => {
         { provide: StoreService, useValue: store },
         { provide: ToastService, useValue: toast },
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ metal: 'gold' }) } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ metal: 'gold' }), queryParamMap: convertToParamMap({}) } } },
       ],
     });
     router = TestBed.inject(Router);
@@ -41,11 +45,13 @@ describe('NewTransactionComponent', () => {
     cmp.ngOnInit(); // metal=gold, one item row pre-filled with rate 8530
   }
 
+  const CUST = {
+    id: 'c1', name: 'PRIYANKA RAJ', phone: '9665870336', address1: '2092 Sobha Daisy', pincode: '560103',
+    idProofs: [{ type: 'PAN Card', number: 'ABCDE1234F' }], reference: {}, selfie: null, createdAt: '',
+  };
+
   function fillValid() {
-    cmp.selectedIds = new Set(['PAN Card']);
-    cmp.idNumbers = { 'PAN Card': 'ABCDE1234F' };
-    cmp.name = 'PRIYANKA RAJ'; cmp.phone = '9665870336';
-    cmp.addr1 = '2092 Sobha Daisy'; cmp.pin = '560103';
+    cmp.selectedCustomer.set(CUST as any);
     const row = cmp.items()[0];
     row.article = 'NECKLACE'; row.gross = 55.11; row.purity = 90; row.rate = 8530;
     cmp.margin = 79; cmp.charges = 100;
@@ -66,29 +72,11 @@ describe('NewTransactionComponent', () => {
     expect(t.amountPayableRounded).toBe(422900);
   });
 
-  it('onDigits filters phone/pin input', () => {
-    cmp.onDigits('phone', '9a8b76543210999'); expect(cmp.phone).toBe('9876543210');
-    cmp.onDigits('pin', 'ab560073xx'); expect(cmp.pin).toBe('560073');
-  });
-
-  it('blocks submit when no ID proof is selected', async () => {
-    fillValid(); cmp.selectedIds = new Set();
+  it('blocks submit until a registered customer is selected', async () => {
+    const row = cmp.items()[0]; row.article = 'RING'; row.gross = 10; row.rate = 8530;
     await cmp.submit();
-    expect(toast.err).toHaveBeenCalledWith('Select at least one ID proof.');
+    expect(toast.err).toHaveBeenCalledWith('Search and select a registered customer first.');
     expect(addTxn).not.toHaveBeenCalled();
-  });
-
-  it('blocks submit on an invalid phone', async () => {
-    fillValid(); cmp.phone = '123';
-    await cmp.submit();
-    expect(toast.err).toHaveBeenCalledWith('Enter a valid 10-digit seller phone.');
-    expect(addTxn).not.toHaveBeenCalled();
-  });
-
-  it('blocks submit on an invalid PIN', async () => {
-    fillValid(); cmp.pin = '12';
-    await cmp.submit();
-    expect(toast.err).toHaveBeenCalledWith('Enter a valid 6-digit PIN code.');
   });
 
   it('blocks submit when a row article name is missing', async () => {
@@ -105,25 +93,44 @@ describe('NewTransactionComponent', () => {
     expect(addTxn).not.toHaveBeenCalled();
   });
 
-  it('blocks an employee with insufficient funds', async () => {
-    meSig.set({ id: 'u-emp1', name: 'Counter Staff', role: 'employee', phone: '9999900002' });
-    balance = 0;
-    fillValid();
-    await cmp.submit();
-    expect(toast.err).toHaveBeenCalledWith(jasmine.stringMatching(/Insufficient funds/));
-    expect(addTxn).not.toHaveBeenCalled();
+  it('admin new bill defaults billing charges to the configured ₹100', () => {
+    expect(cmp.charges).toBe(100);
+    expect(cmp.margin).toBe(0);
   });
 
-  it('valid admin submit saves the bill and routes to the invoice', async () => {
+  it('valid admin submit generates the bill and routes to the invoice', async () => {
     fillValid();
     await cmp.submit();
     expect(addTxn).toHaveBeenCalled();
     const sent = addTxn.calls.mostRecent().args[0] as Txn;
     expect(sent.totals.amountPayable).toBe(422900);
+    expect(sent.customer.name).toBe('PRIYANKA RAJ');
     expect(sent.idProofs).toEqual([{ type: 'PAN Card', number: 'ABCDE1234F' }]);
     expect(sent.items[0].article).toBe('NECKLACE');
-    expect(sent.article).toBe('NECKLACE');
     expect(router.navigate).toHaveBeenCalledWith(['/invoice', 'txn-1']);
+  });
+
+  it('staff submit sends for approval and routes to the list (not the invoice)', async () => {
+    meSig.set({ id: 'u-emp1', name: 'Counter Staff', role: 'employee', phone: '9999900002' });
+    addTxn.and.resolveTo({ id: 'txn-2', billNo: '5678ABCDEF', status: 'pending' } as Txn);
+    fillValid();
+    await cmp.submit();
+    expect(addTxn).toHaveBeenCalled();
+    expect(toast.ok).toHaveBeenCalledWith('Sent to admin for approval.');
+    expect(router.navigate).toHaveBeenCalledWith(['/transactions']);
+    expect(router.navigate).not.toHaveBeenCalledWith(['/invoice', 'txn-2']);
+  });
+
+  it('pickCustomer selects the registered customer and clears the search', () => {
+    cmp.custSearch.set('rav');
+    cmp.pickCustomer({
+      id: 'c1', name: 'RAVI', phone: '9800000000', address1: 'MG Rd', pincode: '560073',
+      idProofs: [{ type: 'PAN Card', number: 'ABCDE1234F' }], reference: {}, selfie: null, createdAt: '',
+    } as any);
+    expect(cmp.selectedCustomer()?.name).toBe('RAVI');
+    expect(cmp.custSearch()).toBe('');
+    cmp.clearCustomer();
+    expect(cmp.selectedCustomer()).toBeNull();
   });
 
   it('addItem / removeItem manage rows (min one, no error at one row)', () => {

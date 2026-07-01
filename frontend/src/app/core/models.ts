@@ -1,6 +1,7 @@
 export type Role = 'admin' | 'employee';
 export type Metal = 'gold' | 'silver';
 export type FundStatus = 'pending' | 'approved' | 'rejected';
+export type TxnStatus = 'pending' | 'approved' | 'rejected';
 
 export interface User {
   id: string;
@@ -44,6 +45,21 @@ export interface Reference {
   address?: string;
 }
 
+export interface RegisteredCustomer {
+  id: string;
+  name: string;
+  dob?: string;
+  phone: string;
+  address1: string;
+  address2?: string;
+  pincode: string;
+  landmark?: string;
+  idProofs: IdProof[];
+  reference: Reference;
+  selfie: string | null;
+  createdAt: string;
+}
+
 export interface TxnItem {
   article: string;
   gross: number;
@@ -79,7 +95,20 @@ export interface Txn {
   article: string;
   items: TxnItem[];
   totals: Totals;
+  status: TxnStatus;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  deleted?: boolean;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
 }
+
+export interface BillingConfig {
+  defaultMargin: number;
+  defaultBillingCharges: number;
+}
+
+export type PaymentMethod = 'Cash' | 'UPI' | 'IMPS' | 'NEFT' | 'RTGS' | 'Cheque';
 
 export interface FundRequest {
   id: string;
@@ -88,6 +117,8 @@ export interface FundRequest {
   amount: number;
   note: string;
   status: FundStatus;
+  method?: string | null;
+  reference?: string | null;
   requestedAt: string;
   decidedAt: string | null;
   decidedBy: string | null;
@@ -101,4 +132,7 @@ export interface AppState {
   transactions: Txn[];
   funds: FundRequest[];
   balances: Record<string, number>;
+  customers: RegisteredCustomer[];
+  billingConfig: BillingConfig;
+  deletedTransactions: Txn[];
 }

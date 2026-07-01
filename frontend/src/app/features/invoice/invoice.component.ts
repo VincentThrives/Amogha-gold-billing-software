@@ -1,7 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
+import { ToastService } from '../../core/services/toast.service';
 import { Company, Txn } from '../../core/models';
 import { billDate, inr, inWords } from '../../core/calc';
 
@@ -13,8 +14,10 @@ import { billDate, inr, inWords } from '../../core/calc';
   styleUrl: './invoice.component.scss',
 })
 export class InvoiceComponent implements OnInit {
-  private store = inject(StoreService);
+  store = inject(StoreService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private toast = inject(ToastService);
 
   txn?: Txn;
   company!: Company;
@@ -28,12 +31,24 @@ export class InvoiceComponent implements OnInit {
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id')!;
-    this.txn = this.store.txnById(id);
+    this.txn = this.store.txnById(id) || this.store.deletedTransactions().find(t => t.id === id);
     this.company = this.store.company()!;
     if (this.txn) {
       const padCount = Math.max(0, 6 - this.txn.items.length);
       this.pad = Array.from({ length: padCount }, (_, i) => i);
     }
+  }
+
+  async deleteBill() {
+    const t = this.txn;
+    if (!t) return;
+    if (!confirm(`Move bill ${t.billNo} to Deleted Invoices? The staff payout will be refunded.`)) return;
+    this.busy.set(true);
+    try {
+      await this.store.deleteTxn(t.id);
+      this.toast.show(`Bill ${t.billNo} moved to Deleted Invoices.`);
+      this.router.navigate(['/transactions']);
+    } catch (e: any) { this.toast.err(e?.error?.error || 'Could not delete.'); this.busy.set(false); }
   }
 
   get address(): string {

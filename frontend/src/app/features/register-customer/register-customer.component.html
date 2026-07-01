@@ -1,0 +1,43 @@
+<div class="page-head">
+  <div><h2>Register Customer</h2><p>Save a customer's KYC once, then bill them faster later</p></div>
+  <a routerLink="/dashboard" class="btn btn-ghost">&larr; Back</a>
+</div>
+
+<app-kyc-form [model]="kyc"></app-kyc-form>
+
+<div class="row" style="justify-content:flex-end">
+  <button class="btn btn-gold" [disabled]="busy()" (click)="save()">
+    <i class="fa-solid fa-user-plus"></i> Register Customer
+  </button>
+</div>
+
+<div class="card">
+  <h3><i class="fa-solid fa-address-book"></i> Registered Customers</h3>
+  <div class="field" style="max-width:360px">
+    <label>Search by name or phone</label>
+    <input placeholder="Type to search…" [ngModel]="term()" (ngModelChange)="term.set($event)">
+  </div>
+
+  @if (!results().length) {
+    <div class="empty"><i class="fa-solid fa-user-slash"></i>No registered customers yet.</div>
+  } @else {
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Phone</th><th>Registered</th><th></th></tr></thead>
+      <tbody>
+        @for (c of results(); track c.id) {
+          <tr>
+            <td><a class="link" (click)="startTxn(c)">{{ c.name }}</a></td>
+            <td>{{ c.phone }}</td>
+            <td>{{ date(c.createdAt) }}</td>
+            <td class="right">
+              <button class="btn btn-sm btn-gold" (click)="startTxn(c)">
+                <i class="fa-solid fa-file-invoice-dollar"></i> New bill
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table></div>
+  }
+  <p class="hintline">Click a customer to start a Gold / Silver bill with their details pre-filled.</p>
+</div>

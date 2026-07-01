@@ -31,10 +31,16 @@ public class FundService {
         return funds.save(fr);
     }
 
-    public void decide(String id, boolean approve, AmoghaPrincipal principal) {
+    public void decide(String id, boolean approve, String method, String reference, AmoghaPrincipal principal) {
         FundRequest fr = funds.findById(id).orElse(null);
         if (fr == null || !"pending".equals(fr.status)) throw ApiException.badRequest("Request not pending.");
+        if (approve && (method == null || method.isBlank()))
+            throw ApiException.badRequest("Select how the funds were given (Cash / UPI / NEFT / RTGS…).");
         fr.status = approve ? "approved" : "rejected";
+        if (approve) {
+            fr.method = method.trim();
+            fr.reference = reference == null ? "" : reference.trim();
+        }
         fr.decidedAt = Instant.now().toString();
         fr.decidedBy = principal.userId();
         funds.save(fr);

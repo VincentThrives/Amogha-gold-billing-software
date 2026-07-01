@@ -1,0 +1,31 @@
+<div class="page-head">
+  <div><h2>Deleted Invoices</h2><p>Cancelled bills — restore them or delete forever</p></div>
+</div>
+
+<div class="card">
+  <p class="hintline"><i class="fa-solid fa-circle-info"></i> Deleted bills are excluded from the transaction list and reports. Restoring re-applies the staff payout.</p>
+  @if (!deleted().length) {
+    <div class="empty"><i class="fa-solid fa-trash-can"></i>The recycle bin is empty.</div>
+  } @else {
+    <div class="table-wrap"><table>
+      <thead><tr><th>Bill No</th><th>Customer</th><th>Metal</th><th>Net Wt</th><th>Payable</th><th>Deleted</th><th></th></tr></thead>
+      <tbody>
+        @for (t of deleted(); track t.id) {
+          <tr>
+            <td><b>{{ t.billNo }}</b></td>
+            <td>{{ t.customer.name }} <span class="muted">· {{ t.customer.phone }}</span></td>
+            <td><span class="badge" [ngClass]="t.metal">{{ t.metal }}</span></td>
+            <td>{{ t.totals.netWeight.toFixed(2) }} g</td>
+            <td><b>{{ inr0(t.totals.amountPayable) }}</b></td>
+            <td>{{ date(t.deletedAt) }}</td>
+            <td class="right">
+              <a class="btn btn-sm btn-ghost" [routerLink]="['/invoice', t.id]" title="View"><i class="fa-solid fa-eye"></i></a>
+              <button class="btn btn-sm btn-ok" [disabled]="busy() === t.id" (click)="restore(t)"><i class="fa-solid fa-rotate-left"></i> Restore</button>
+              <button class="btn btn-sm btn-err" [disabled]="busy() === t.id" (click)="purge(t)"><i class="fa-solid fa-trash"></i> Delete forever</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table></div>
+  }
+</div>

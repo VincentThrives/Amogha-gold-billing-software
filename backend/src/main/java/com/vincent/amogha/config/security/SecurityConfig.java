@@ -40,10 +40,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
                 // admin-only writes
-                .requestMatchers(HttpMethod.PUT, "/api/rates", "/api/company").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/rates", "/api/company", "/api/billing-config").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/funds/*/decide").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/transactions/*/approve", "/api/transactions/*/reject",
+                        "/api/transactions/*/delete", "/api/transactions/*/restore").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/transactions/**").hasRole("ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // everything else under /api needs a valid token
                 .requestMatchers("/api/**").authenticated()

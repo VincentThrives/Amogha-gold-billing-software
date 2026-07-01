@@ -11,6 +11,8 @@ public class FundRequest {
     public double amount;
     public String note;
     public String status;       // pending | approved | rejected
+    public String method;       // Cash | UPI | IMPS | NEFT | RTGS | Cheque (required on approval)
+    public String reference;    // optional transaction/reference no.
     public String requestedAt;
     public String decidedAt;
     public String decidedBy;
