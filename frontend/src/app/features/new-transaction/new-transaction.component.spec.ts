@@ -23,6 +23,7 @@ describe('NewTransactionComponent', () => {
       isAdmin: () => meSig()?.role === 'admin',
       billingConfig: () => ({ defaultMargin: 0, defaultBillingCharges: 100 }),
       balanceOf: (_: string) => balance,
+      transactions: signal<Txn[]>([]),
       genId: (p: string) => p + '-x',
       genBillNo: () => '1234ABCDEF',
       addTxn,
@@ -112,6 +113,7 @@ describe('NewTransactionComponent', () => {
 
   it('staff submit sends for approval and routes to the list (not the invoice)', async () => {
     meSig.set({ id: 'u-emp1', name: 'Counter Staff', role: 'employee', phone: '9999900002' });
+    balance = 600000;  // enough funds to cover the ~₹4.23L bill
     addTxn.and.resolveTo({ id: 'txn-2', billNo: '5678ABCDEF', status: 'pending' } as Txn);
     fillValid();
     await cmp.submit();
@@ -119,6 +121,50 @@ describe('NewTransactionComponent', () => {
     expect(toast.ok).toHaveBeenCalledWith('Sent to admin for approval.');
     expect(router.navigate).toHaveBeenCalledWith(['/transactions']);
     expect(router.navigate).not.toHaveBeenCalledWith(['/invoice', 'txn-2']);
+  });
+
+  it('blocks a staff submit when their available funds cannot cover the bill', async () => {
+    meSig.set({ id: 'u-emp1', name: 'Counter Staff', role: 'employee', phone: '9999900002' });
+    balance = 200000;  // bill is ~₹4.23L → insufficient
+    fillValid();
+    await cmp.submit();
+    expect(addTxn).not.toHaveBeenCalled();
+    expect(toast.err).toHaveBeenCalledWith(jasmine.stringMatching(/Insufficient funds/));
+  });
+
+  it('lets an admin bill without any funds (no fund check for admins)', async () => {
+    balance = 0;  // admin has no wallet; should still generate the bill
+    fillValid();
+    await cmp.submit();
+    expect(addTxn).toHaveBeenCalled();
+  });
+
+  it('release amount is deducted from the payable and sent with the bill', async () => {
+    fillValid();
+    cmp.release = 300000; cmp.releaseMethod = 'RTGS'; cmp.releaseBank = 'HDFC Bank';
+    await cmp.submit();
+    expect(addTxn).toHaveBeenCalled();
+    const sent = addTxn.calls.mostRecent().args[0] as Txn;
+    expect(sent.totals.releaseAmount).toBe(300000);
+    expect(sent.totals.amountPayable).toBe(122900); // 423079.47 − 79 − 100 − 300000
+    expect(sent.releaseMethod).toBe('RTGS');
+    expect(sent.releaseBank).toBe('HDFC Bank');
+  });
+
+  it('blocks submit when a release amount has no payment method', async () => {
+    fillValid();
+    cmp.release = 100000; cmp.releaseMethod = ''; cmp.releaseBank = 'HDFC Bank';
+    await cmp.submit();
+    expect(toast.err).toHaveBeenCalledWith('Select how the release amount was paid (Cash / RTGS / NEFT…).');
+    expect(addTxn).not.toHaveBeenCalled();
+  });
+
+  it('blocks submit when the release amount has no bank', async () => {
+    fillValid();
+    cmp.release = 100000; cmp.releaseMethod = 'Cash'; cmp.releaseBank = '';
+    await cmp.submit();
+    expect(toast.err).toHaveBeenCalledWith('Enter the bank the release amount was paid to.');
+    expect(addTxn).not.toHaveBeenCalled();
   });
 
   it('pickCustomer selects the registered customer and clears the search', () => {

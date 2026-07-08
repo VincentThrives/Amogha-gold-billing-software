@@ -1,5 +1,8 @@
 <div class="page-head">
   <div><h2>Reports</h2><p>{{ mineOnly() ? 'Your sales' : 'All sales' }} for a selected day or period</p></div>
+  <button class="btn btn-gold" [disabled]="busy() || !rows().length" (click)="downloadPdf()">
+    <i class="fa-solid fa-download"></i> Download PDF
+  </button>
 </div>
 
 <!-- Date range -->
@@ -12,6 +15,13 @@
       <button class="btn btn-sm btn-ghost" (click)="setMonth()">This month</button>
     </div>
   </div>
+</div>
+
+<div id="salesReportDoc">
+<!-- PDF header (also shown on screen) -->
+<div class="rep-doc-head">
+  <div class="rep-doc-title">{{ company()?.name || 'Amogha Gold Company' }}</div>
+  <div class="rep-doc-sub">{{ mineOnly() ? 'Sales statement' : 'Sales report' }} · {{ from() }} to {{ to() }}</div>
 </div>
 
 <!-- Summary cards -->
@@ -67,4 +77,5 @@
       </tbody>
     </table></div>
   }
+</div>
 </div>

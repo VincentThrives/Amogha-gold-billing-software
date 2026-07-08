@@ -25,10 +25,12 @@ export class ApprovalEditComponent implements OnInit {
   private router = inject(Router);
 
   readonly articleOptions = ARTICLE_OPTIONS;
+  readonly RELEASE_METHODS = ['Cash', 'RTGS', 'NEFT', 'UPI', 'IMPS', 'Cheque'];
   txn = signal<Txn | null>(null);
   items = signal<ItemRow[]>([]);
   margin = 0;
   charges = 0;
+  release = 0; releaseMethod = ''; releaseBank = '';
   busy = signal(false);
 
   inr2 = (n: number) => inr(n, 2);
@@ -44,12 +46,15 @@ export class ApprovalEditComponent implements OnInit {
     const cfg = this.store.billingConfig();
     this.margin = t.totals.margin || cfg.defaultMargin;
     this.charges = t.totals.billingCharges || cfg.defaultBillingCharges;
+    this.release = t.totals.releaseAmount || 0;
+    this.releaseMethod = t.releaseMethod || '';
+    this.releaseBank = t.releaseBank || '';
   }
 
   net(it: ItemRow) { return netWeight(it.gross || 0, it.stone, it.other); }
   amount(it: ItemRow) { return itemAmount(this.net(it), it.rate, it.purity); }
   totals() {
-    return computeTotals(this.items().map(it => ({ net: this.net(it), rate: it.rate, purity: it.purity })), this.margin, this.charges);
+    return computeTotals(this.items().map(it => ({ net: this.net(it), rate: it.rate, purity: it.purity })), this.margin, this.charges, this.release);
   }
 
   addItem() { this.items.update(l => [...l, { article: '', gross: null, stone: 0, other: 0, purity: 91.6, rate: 0 }]); }
@@ -70,11 +75,19 @@ export class ApprovalEditComponent implements OnInit {
       const net = this.net(it);
       return { article: it.article.trim(), gross: it.gross || 0, stone: it.stone, other: it.other, net, purity: it.purity, rate: it.rate, amount: itemAmount(net, it.rate, it.purity) };
     });
-    if (this.totals().amountPayableRounded <= 0) return this.fail('Amount payable must be greater than zero.', 'a_gross_0');
+    const tot = this.totals();
+    const release = Number(this.release) || 0;
+    if (release > 0) {
+      if (release > tot.grossAmount) return this.fail('Release amount cannot exceed the gross amount.', 'a_release');
+      if (!this.releaseMethod) return this.fail('Select how the release amount was paid (Cash / RTGS / NEFT…).', 'a_release_method');
+      if (!this.releaseBank.trim()) return this.fail('Enter the bank the release amount was paid to.', 'a_release_bank');
+    }
+    if (tot.amountPayableRounded <= 0) return this.fail('Amount payable must be greater than zero.', 'a_gross_0');
 
     this.busy.set(true);
     try {
-      await this.store.approveTxn(t.id, built, Number(this.margin) || 0, Number(this.charges) || 0);
+      await this.store.approveTxn(t.id, built, Number(this.margin) || 0, Number(this.charges) || 0,
+        release, release > 0 ? this.releaseMethod : '', release > 0 ? this.releaseBank.trim() : '');
       this.toast.ok(`Bill ${t.billNo} approved.`);
       this.router.navigate(['/invoice', t.id]);
       return true;

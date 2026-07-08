@@ -21,6 +21,8 @@ public class Txn {
     public String article;
     public List<TxnItem> items;
     public Totals totals;
+    public String releaseMethod; // Cash | RTGS | NEFT | UPI | IMPS | Cheque (when release amount > 0)
+    public String releaseBank;   // bank the release amount was paid to
     public String status;        // pending | approved | rejected
     public String approvedBy;    // admin user id
     public String approvedAt;    // ISO timestamp
@@ -66,7 +68,8 @@ public class Txn {
         public double margin;
         public double netAmount;
         public double billingCharges;
-        public long amountPayable;   // rounded rupees
+        public double releaseAmount;  // paid to the bank to release the customer's gold
+        public long amountPayable;    // rounded rupees, net to the customer
         public double netWeight;
     }
 }

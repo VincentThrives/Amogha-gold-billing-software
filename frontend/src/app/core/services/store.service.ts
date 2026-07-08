@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { AppState, BillingConfig, Company, FundRequest, Rates, RegisteredCustomer, Txn, TxnItem, User } from '../models';
+import { AdminFund, AppState, BillingConfig, Company, Expense, FundRequest, Rates, RegisteredCustomer, Txn, TxnItem, User } from '../models';
 import { AuthService } from './auth.service';
 import { latestPerCustomer } from '../calc';
 
@@ -24,6 +24,9 @@ export class StoreService {
   readonly customers = signal<RegisteredCustomer[]>([]);
   readonly billingConfig = signal<BillingConfig>(DEFAULT_BILLING);
   readonly deletedTransactions = signal<Txn[]>([]);
+  readonly adminFunds = signal<AdminFund[]>([]);
+  readonly expenses = signal<Expense[]>([]);
+  readonly adminFundAvailable = signal<number>(0);
 
   readonly isAdmin = computed(() => this.me()?.role === 'admin');
   readonly latestTxns = computed(() => latestPerCustomer(this.transactions()));
@@ -58,6 +61,9 @@ export class StoreService {
     this.customers.set(s.customers || []);
     this.billingConfig.set(s.billingConfig || DEFAULT_BILLING);
     this.deletedTransactions.set(s.deletedTransactions || []);
+    this.adminFunds.set(s.adminFunds || []);
+    this.expenses.set(s.expenses || []);
+    this.adminFundAvailable.set(s.adminFundAvailable || 0);
     return true;
   }
 
@@ -65,6 +71,7 @@ export class StoreService {
     this.me.set(null); this.users.set([]); this.company.set(null);
     this.rates.set(EMPTY_RATES); this.transactions.set([]); this.funds.set([]); this.balances.set({});
     this.customers.set([]); this.billingConfig.set(DEFAULT_BILLING); this.deletedTransactions.set([]);
+    this.adminFunds.set([]); this.expenses.set([]); this.adminFundAvailable.set(0);
   }
 
   /* ---- bill number (client side; server keeps it) ---- */
@@ -90,9 +97,14 @@ export class StoreService {
     return res;
   }
   async addFundRequest(amount: number, note: string) { await firstValueFrom(this.http.post('/api/funds', { amount, note })); await this.sync(); }
+  async addAdminFund(amount: number, method: string, note: string) { await firstValueFrom(this.http.post('/api/admin-funds', { amount, method, note })); await this.sync(); }
+  async addExpense(amount: number, reason: string) { await firstValueFrom(this.http.post('/api/expenses', { amount, reason })); await this.sync(); }
   async decideFund(reqId: string, approve: boolean, method = '', reference = '') { await firstValueFrom(this.http.post(`/api/funds/${encodeURIComponent(reqId)}/decide`, { approve, method, reference })); await this.sync(); }
   async setBillingConfig(defaultMargin: number, defaultBillingCharges: number) { await firstValueFrom(this.http.put('/api/billing-config', { defaultMargin, defaultBillingCharges })); await this.sync(); }
-  async approveTxn(id: string, items: TxnItem[], margin: number, billingCharges: number) { await firstValueFrom(this.http.post(`/api/transactions/${encodeURIComponent(id)}/approve`, { items, margin, billingCharges })); await this.sync(); }
+  async approveTxn(id: string, items: TxnItem[], margin: number, billingCharges: number, releaseAmount = 0, releaseMethod = '', releaseBank = '') {
+    await firstValueFrom(this.http.post(`/api/transactions/${encodeURIComponent(id)}/approve`, { items, margin, billingCharges, releaseAmount, releaseMethod, releaseBank }));
+    await this.sync();
+  }
   async rejectTxn(id: string) { await firstValueFrom(this.http.post(`/api/transactions/${encodeURIComponent(id)}/reject`, {})); await this.sync(); }
   async deleteTxn(id: string) { await firstValueFrom(this.http.post(`/api/transactions/${encodeURIComponent(id)}/delete`, {})); await this.sync(); }
   async restoreTxn(id: string) { await firstValueFrom(this.http.post(`/api/transactions/${encodeURIComponent(id)}/restore`, {})); await this.sync(); }

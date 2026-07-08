@@ -10,7 +10,7 @@ const DEL = {
   id: 'txn-1', billNo: '1234ABCDEF', metal: 'gold', date: '', employeeId: '', employeeName: '',
   customer: { name: 'RAVI', phone: '9800000000', address1: '', pincode: '' },
   idProofs: [], reference: {}, selfie: null, clientOtpVerified: false, article: 'RING', items: [],
-  totals: { grossAmount: 0, margin: 0, netAmount: 0, billingCharges: 0, amountPayable: 6000, netWeight: 10 },
+  totals: { grossAmount: 0, margin: 0, netAmount: 0, billingCharges: 0, releaseAmount: 0, amountPayable: 6000, netWeight: 10 },
   status: 'approved', deleted: true, deletedAt: '2025-02-10T10:00:00',
 } as unknown as Txn;
 

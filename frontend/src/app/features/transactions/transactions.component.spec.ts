@@ -11,7 +11,7 @@ function txn(id: string, name: string, phone: string, billNo: string, employeeId
     id, billNo, date: '', metal: 'gold', employeeId, employeeName: '',
     customer: { name, phone, address1: '', pincode: '' } as any,
     idProofs: [], reference: {}, selfie: null, clientOtpVerified: false, article: '', items: [],
-    totals: { grossAmount: 0, margin: 0, netAmount: 0, billingCharges: 0, amountPayable: 1000, netWeight: 0 },
+    totals: { grossAmount: 0, margin: 0, netAmount: 0, billingCharges: 0, releaseAmount: 0, amountPayable: 1000, netWeight: 0 },
     status: 'approved',
   } as Txn;
 }

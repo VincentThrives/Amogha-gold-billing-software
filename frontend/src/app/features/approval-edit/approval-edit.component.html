@@ -54,7 +54,17 @@
   <!-- Charges + totals -->
   <div class="card">
     <h3><i class="fa-solid fa-receipt"></i> Charges &amp; Total</h3>
-    <div class="grid grid-2" style="max-width:520px">
+    <div class="grid grid-3" style="max-width:760px">
+      <div class="field"><label>Release Amount (₹ to bank)</label><input id="a_release" type="number" min="0" [(ngModel)]="release"></div>
+      <div class="field"><label>Paid via</label>
+        <select id="a_release_method" [(ngModel)]="releaseMethod">
+          <option value="">— select —</option>
+          @for (m of RELEASE_METHODS; track m) { <option [value]="m">{{ m }}</option> }
+        </select>
+      </div>
+      <div class="field"><label>Bank</label><input id="a_release_bank" [(ngModel)]="releaseBank" placeholder="e.g. HDFC Bank"></div>
+    </div>
+    <div class="grid grid-2" style="max-width:520px;margin-top:6px">
       <div class="field"><label>Margin (₹ deducted)</label><input type="number" min="0" [(ngModel)]="margin"></div>
       <div class="field"><label>Billing Charges (₹ deducted)</label><input type="number" min="0" [(ngModel)]="charges"></div>
     </div>
@@ -63,6 +73,7 @@
       <div class="line"><span>Margin</span><b>{{ inr2(totals().margin) }}</b></div>
       <div class="line"><span>Net Amount</span><b>{{ inr2(totals().netAmount) }}</b></div>
       <div class="line"><span>Billing Charges</span><b>{{ inr2(totals().billingCharges) }}</b></div>
+      @if (release > 0) { <div class="line"><span>Release Amount{{ releaseBank ? ' — ' + releaseBank : '' }}{{ releaseMethod ? ' (' + releaseMethod + ')' : '' }}</span><b>{{ inr2(totals().releaseAmount) }}</b></div> }
       <div class="line big"><span>Amount Payable</span><b>{{ inr0(totals().amountPayableRounded) }}</b></div>
     </div>
   </div>

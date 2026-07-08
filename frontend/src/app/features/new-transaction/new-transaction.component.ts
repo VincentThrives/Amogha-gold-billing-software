@@ -34,8 +34,10 @@ export class NewTransactionComponent implements OnInit {
   custResults = computed(() => this.store.searchCustomers(this.custSearch()));
 
   // items + charges
+  readonly RELEASE_METHODS = ['Cash', 'RTGS', 'NEFT', 'UPI', 'IMPS', 'Cheque'];
   items = signal<ItemRow[]>([]);
   margin = 0; charges = 0;
+  release = 0; releaseMethod = ''; releaseBank = '';
   busy = signal(false);
 
   inr2 = (n: number) => inr(n, 2);
@@ -90,7 +92,7 @@ export class NewTransactionComponent implements OnInit {
   totals() {
     return computeTotals(
       this.items().map(it => ({ net: netWeight(it.gross || 0, it.stone, it.other), rate: it.rate, purity: it.purity })),
-      this.margin, this.charges);
+      this.margin, this.charges, this.release);
   }
 
   // highlight a specific cell in a specific item row (article/gross/rate)
@@ -122,8 +124,28 @@ export class NewTransactionComponent implements OnInit {
     const tot = this.totals();
     if (tot.grossAmount <= 0) return this.failRow('Amount must be greater than zero.', 'i_gross', rows[0].idx);
 
-    // staff fund limit is enforced by the admin at approval time, not here
+    // release amount (paid to the bank) validation
+    const release = Number(this.release) || 0;
+    if (release > 0) {
+      if (release > tot.grossAmount) { this.toast.err('Release amount cannot exceed the gross amount.'); highlightField(document.getElementById('t_release')); return false; }
+      if (!this.releaseMethod) { this.toast.err('Select how the release amount was paid (Cash / RTGS / NEFT…).'); highlightField(document.getElementById('t_release_method')); return false; }
+      if (!this.releaseBank.trim()) { this.toast.err('Enter the bank the release amount was paid to.'); highlightField(document.getElementById('t_release_bank')); return false; }
+    }
+
     const me = this.store.me()!;
+
+    // staff can only send a bill for approval if their wallet balance covers the amount payable
+    // to the customer. (The release amount is paid to the bank separately and does not touch the
+    // billing wallet.) If not, they must get a fund request approved first. Admins skip this check.
+    if (!this.store.isAdmin()) {
+      const needed = tot.amountPayableRounded;
+      const available = this.store.balanceOf(me.id);
+      if (needed > available) {
+        this.toast.err(`Insufficient funds: ₹${available.toLocaleString('en-IN')} available, this bill needs ₹${needed.toLocaleString('en-IN')}. Request and get funds approved before sending for approval.`);
+        highlightField(document.getElementById('i_gross_' + rows[0].idx));
+        return false;
+      }
+    }
 
     const txn: Txn = {
       id: this.store.genId('txn'),
@@ -148,8 +170,11 @@ export class NewTransactionComponent implements OnInit {
       }),
       totals: {
         grossAmount: tot.grossAmount, margin: tot.margin, netAmount: tot.netAmount,
-        billingCharges: tot.billingCharges, amountPayable: tot.amountPayableRounded, netWeight: tot.netWeight,
+        billingCharges: tot.billingCharges, releaseAmount: tot.releaseAmount,
+        amountPayable: tot.amountPayableRounded, netWeight: tot.netWeight,
       },
+      releaseMethod: release > 0 ? this.releaseMethod : '',
+      releaseBank: release > 0 ? this.releaseBank.trim() : '',
       status: 'pending',   // server sets the real status by role (admin→approved, staff→pending)
     };
 

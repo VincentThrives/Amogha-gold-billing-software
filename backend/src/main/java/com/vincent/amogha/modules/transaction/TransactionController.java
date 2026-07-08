@@ -19,11 +19,13 @@ public class TransactionController {
         return service.create(txn, principal);
     }
 
-    public record ApproveRequest(java.util.List<Txn.TxnItem> items, double margin, double billingCharges) {}
+    public record ApproveRequest(java.util.List<Txn.TxnItem> items, double margin, double billingCharges,
+                                 double releaseAmount, String releaseMethod, String releaseBank) {}
 
     @PostMapping("/{id}/approve")
     public Txn approve(@PathVariable String id, @RequestBody ApproveRequest body, @AuthenticationPrincipal AmoghaPrincipal principal) {
-        return service.approve(id, body.items(), body.margin(), body.billingCharges(), principal);
+        return service.approve(id, body.items(), body.margin(), body.billingCharges(),
+                body.releaseAmount(), body.releaseMethod(), body.releaseBank(), principal);
     }
 
     @PostMapping("/{id}/reject")

@@ -3,6 +3,7 @@ package com.vincent.amogha.modules.fund;
 import com.vincent.amogha.common.ApiException;
 import com.vincent.amogha.common.Ids;
 import com.vincent.amogha.config.security.AmoghaPrincipal;
+import com.vincent.amogha.modules.ledger.LedgerService;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -12,9 +13,10 @@ public class FundService {
 
     private final FundRepository funds;
     private final BalanceRepository balances;
+    private final LedgerService ledger;
 
-    public FundService(FundRepository funds, BalanceRepository balances) {
-        this.funds = funds; this.balances = balances;
+    public FundService(FundRepository funds, BalanceRepository balances, LedgerService ledger) {
+        this.funds = funds; this.balances = balances; this.ledger = ledger;
     }
 
     public FundRequest request(double amount, String note, AmoghaPrincipal principal) {
@@ -36,6 +38,12 @@ public class FundService {
         if (fr == null || !"pending".equals(fr.status)) throw ApiException.badRequest("Request not pending.");
         if (approve && (method == null || method.isBlank()))
             throw ApiException.badRequest("Select how the funds were given (Cash / UPI / NEFT / RTGS…).");
+        if (approve) {
+            double available = ledger.availableAdminFund();
+            if (available < fr.amount)
+                throw ApiException.badRequest("Insufficient admin funds: ₹" + (long) available + " available, this approval needs ₹"
+                        + (long) fr.amount + ". Add more of your own fund before approving.");
+        }
         fr.status = approve ? "approved" : "rejected";
         if (approve) {
             fr.method = method.trim();

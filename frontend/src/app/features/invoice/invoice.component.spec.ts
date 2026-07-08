@@ -82,4 +82,34 @@ describe('InvoiceComponent', () => {
     await cmp.deleteBill();
     expect(deleteTxn).not.toHaveBeenCalled();
   });
+
+  it('renders a Release Amount line with the bank and method when release > 0', () => {
+    const relTxn = {
+      ...TXN,
+      totals: { ...(TXN as any).totals, releaseAmount: 300000, amountPayable: 122900 },
+      releaseMethod: 'RTGS', releaseBank: 'HDFC Bank',
+    } as unknown as Txn;
+    const store = {
+      txnById: (_: string) => relTxn,
+      deletedTransactions: signal<Txn[]>([]),
+      company: () => ({ name: 'Amogha Gold Company', addressLines: [], gstn: '', phone: '', legalName: '', terms: [] }),
+      isAdmin: () => true,
+      deleteTxn: jasmine.createSpy('deleteTxn'),
+    };
+    TestBed.configureTestingModule({
+      imports: [InvoiceComponent],
+      providers: [
+        { provide: StoreService, useValue: store },
+        { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['show', 'err']) },
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 'txn-1' }) } } },
+      ],
+    });
+    const f = TestBed.createComponent(InvoiceComponent);
+    f.detectChanges();
+    const text = (f.nativeElement as HTMLElement).textContent || '';
+    expect(text).toContain('Release Amount');
+    expect(text).toContain('HDFC Bank');
+    expect(text).toContain('RTGS');
+  });
 });

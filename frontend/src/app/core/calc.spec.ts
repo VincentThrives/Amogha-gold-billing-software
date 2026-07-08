@@ -36,6 +36,17 @@ describe('calc.computeTotals', () => {
     expect(t.amountPayable).toBe(3000);
     expect(t.netWeight).toBe(8);
   });
+  it('release amount is deducted from the payable (gross 5L − release 3L = 2L)', () => {
+    const t = computeTotals([{ amount: 500000, net: 100 }], 0, 0, 300000);
+    expect(t.grossAmount).toBe(500000);
+    expect(t.releaseAmount).toBe(300000);
+    expect(t.amountPayable).toBe(200000);
+    expect(t.amountPayableRounded).toBe(200000);
+  });
+  it('release defaults to 0 and clamps negatives', () => {
+    expect(computeTotals([{ amount: 1000, net: 1 }], 0, 0).releaseAmount).toBe(0);
+    expect(computeTotals([{ amount: 1000, net: 1 }], 0, 0, -50).releaseAmount).toBe(0);
+  });
 });
 
 describe('calc.latestPerCustomer', () => {

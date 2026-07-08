@@ -24,6 +24,7 @@ export const routes: Routes = [
       { path: 'billing-defaults', canActivate: [adminGuard], loadComponent: () => import('./features/billing-defaults/billing-defaults.component').then(m => m.BillingDefaultsComponent) },
       { path: 'employees', canActivate: [adminGuard], loadComponent: () => import('./features/employees/employees.component').then(m => m.EmployeesComponent) },
       { path: 'reports', loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent) },
+      { path: 'fund-reports', loadComponent: () => import('./features/fund-reports/fund-reports.component').then(m => m.FundReportsComponent) },
       { path: 'deleted', canActivate: [adminGuard], loadComponent: () => import('./features/deleted-invoices/deleted-invoices.component').then(m => m.DeletedInvoicesComponent) },
       { path: 'settings', canActivate: [adminGuard], loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent) },
       { path: 'invoice/:id', loadComponent: () => import('./features/invoice/invoice.component').then(m => m.InvoiceComponent) },

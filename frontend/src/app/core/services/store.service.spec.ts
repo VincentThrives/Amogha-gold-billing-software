@@ -19,6 +19,9 @@ const STATE: AppState = {
   customers: [],
   billingConfig: { defaultMargin: 0, defaultBillingCharges: 100 },
   deletedTransactions: [],
+  adminFunds: [],
+  expenses: [],
+  adminFundAvailable: 0,
 };
 
 describe('StoreService', () => {

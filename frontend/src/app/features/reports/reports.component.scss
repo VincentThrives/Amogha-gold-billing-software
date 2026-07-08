@@ -1,5 +1,9 @@
 :host { display: block; }
 
+.rep-doc-head { margin: 4px 2px 14px; }
+.rep-doc-title { font-size: 20px; font-weight: 800; color: var(--brand, #4a1d5f); }
+.rep-doc-sub { color: var(--muted, #6b7280); font-size: 13px; margin-top: 2px; }
+
 .range { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
 .range .field { margin: 0; }
 .range-presets { display: flex; gap: 8px; }

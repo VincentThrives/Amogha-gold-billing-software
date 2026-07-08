@@ -12,6 +12,9 @@ import com.vincent.amogha.modules.settings.BillingConfig;
 import com.vincent.amogha.modules.settings.BillingConfigRepository;
 import com.vincent.amogha.modules.settings.CompanyRepository;
 import com.vincent.amogha.modules.settings.RatesRepository;
+import com.vincent.amogha.modules.ledger.AdminFundRepository;
+import com.vincent.amogha.modules.ledger.ExpenseRepository;
+import com.vincent.amogha.modules.ledger.LedgerService;
 import com.vincent.amogha.modules.transaction.TxnRepository;
 import com.vincent.amogha.modules.user.User;
 import com.vincent.amogha.modules.user.UserRepository;
@@ -34,13 +37,18 @@ public class StateController {
     private final BalanceRepository balances;
     private final CustomerRepository customers;
     private final BillingConfigRepository billingConfig;
+    private final AdminFundRepository adminFunds;
+    private final ExpenseRepository expenses;
+    private final LedgerService ledger;
 
     public StateController(UserRepository users, CompanyRepository companies, RatesRepository rates,
                            TxnRepository txns, FundRepository funds, BalanceRepository balances,
-                           CustomerRepository customers, BillingConfigRepository billingConfig) {
+                           CustomerRepository customers, BillingConfigRepository billingConfig,
+                           AdminFundRepository adminFunds, ExpenseRepository expenses, LedgerService ledger) {
         this.users = users; this.companies = companies; this.rates = rates;
         this.txns = txns; this.funds = funds; this.balances = balances;
         this.customers = customers; this.billingConfig = billingConfig;
+        this.adminFunds = adminFunds; this.expenses = expenses; this.ledger = ledger;
     }
 
     @GetMapping
@@ -76,6 +84,10 @@ public class StateController {
         out.put("balances", balanceMap);
         out.put("customers", customers.findAllByOrderByCreatedAtDesc());  // shared to all staff
         out.put("billingConfig", billingConfig.findById("billing").orElseGet(BillingConfig::defaults));
+        // admin cash ledger — admin only
+        out.put("adminFunds", isAdmin ? adminFunds.findAllByOrderByDateDesc() : java.util.List.of());
+        out.put("expenses", isAdmin ? expenses.findAllByOrderByDateDesc() : java.util.List.of());
+        out.put("adminFundAvailable", isAdmin ? ledger.availableAdminFund() : 0.0);
         return out;
     }
 

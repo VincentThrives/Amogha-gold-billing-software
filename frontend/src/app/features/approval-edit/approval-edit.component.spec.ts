@@ -73,6 +73,35 @@ describe('ApprovalEditComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/invoice', 'txn-1']);
   });
 
+  it('seeds the release fields from the pending txn', () => {
+    build({ ...TXN, totals: { ...TXN.totals, releaseAmount: 3000 }, releaseMethod: 'RTGS', releaseBank: 'HDFC Bank' } as Txn);
+    expect(cmp.release).toBe(3000);
+    expect(cmp.releaseMethod).toBe('RTGS');
+    expect(cmp.releaseBank).toBe('HDFC Bank');
+  });
+
+  it('approve sends the release amount, method and bank; payable reflects the deduction', async () => {
+    build();
+    cmp.items()[0].rate = 1200;              // gross 12000
+    cmp.release = 5000; cmp.releaseMethod = 'RTGS'; cmp.releaseBank = 'HDFC Bank';
+    await cmp.approve();
+    expect(approveTxn).toHaveBeenCalled();
+    const [, , , , release, method, bank] = approveTxn.calls.mostRecent().args;
+    expect(release).toBe(5000);
+    expect(method).toBe('RTGS');
+    expect(bank).toBe('HDFC Bank');
+    expect(cmp.totals().amountPayableRounded).toBe(6900); // 12000 − 100 − 5000
+  });
+
+  it('blocks approve when the release amount has no method', async () => {
+    build();
+    cmp.items()[0].rate = 1200;
+    cmp.release = 5000; cmp.releaseMethod = ''; cmp.releaseBank = 'HDFC Bank';
+    await cmp.approve();
+    expect(toast.err).toHaveBeenCalledWith('Select how the release amount was paid (Cash / RTGS / NEFT…).');
+    expect(approveTxn).not.toHaveBeenCalled();
+  });
+
   it('blocks approve when an item has no rate', async () => {
     build();
     cmp.items()[0].rate = 0;

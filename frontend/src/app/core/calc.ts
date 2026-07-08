@@ -36,11 +36,13 @@ export function itemAmount(net: number, rate: number, purity: number): number {
 
 export interface TotalsResult {
   grossAmount: number; margin: number; netAmount: number;
-  billingCharges: number; amountPayable: number; amountPayableRounded: number; netWeight: number;
+  billingCharges: number; releaseAmount: number;
+  amountPayable: number; amountPayableRounded: number; netWeight: number;
 }
 
-export function computeTotals(items: Array<Partial<TxnItem>>, margin: number, charges: number): TotalsResult {
-  margin = Number(margin) || 0; charges = Number(charges) || 0;
+/** Amount Payable (net to customer) = gross − margin − billing charges − release amount (paid to the bank). */
+export function computeTotals(items: Array<Partial<TxnItem>>, margin: number, charges: number, release = 0): TotalsResult {
+  margin = Number(margin) || 0; charges = Number(charges) || 0; release = Math.max(0, Number(release) || 0);
   let gross = 0, netW = 0;
   (items || []).forEach((it) => {
     const amt = it.amount != null ? Number(it.amount) : itemAmount(it.net || 0, it.rate || 0, it.purity || 0);
@@ -48,10 +50,10 @@ export function computeTotals(items: Array<Partial<TxnItem>>, margin: number, ch
     netW += it.net != null ? Number(it.net) : netWeight(it.gross || 0, it.stone || 0, it.other || 0);
   });
   const netAmount = gross - margin;
-  const payable = netAmount - charges;
+  const payable = netAmount - charges - release;
   return {
     grossAmount: gross, margin, netAmount,
-    billingCharges: charges, amountPayable: payable,
+    billingCharges: charges, releaseAmount: release, amountPayable: payable,
     amountPayableRounded: Math.round(payable), netWeight: netW
   };
 }

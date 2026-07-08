@@ -12,7 +12,7 @@ function txn(over: Partial<Txn> & { metal: 'gold' | 'silver'; date: string; stat
     customer: { name: 'Cust', phone: '9000000000', address1: '', pincode: '' } as any,
     idProofs: [], reference: {}, selfie: null, clientOtpVerified: false, article: 'RING',
     items: [{ article: 'RING', gross: over.net, stone: 0, other: 0, net: over.net, purity: 91.6, rate: 8000, amount: over.payable }],
-    totals: { grossAmount: over.payable, margin: 0, netAmount: over.payable, billingCharges: 0, amountPayable: over.payable, netWeight: over.net },
+    totals: { grossAmount: over.payable, margin: 0, netAmount: over.payable, billingCharges: 0, releaseAmount: 0, amountPayable: over.payable, netWeight: over.net },
     status: over.status as any,
   } as Txn;
 }

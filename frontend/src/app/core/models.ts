@@ -76,7 +76,8 @@ export interface Totals {
   margin: number;
   netAmount: number;
   billingCharges: number;
-  amountPayable: number;
+  releaseAmount: number;   // paid to the bank to release the customer's gold
+  amountPayable: number;   // net to the customer
   netWeight: number;
 }
 
@@ -95,6 +96,8 @@ export interface Txn {
   article: string;
   items: TxnItem[];
   totals: Totals;
+  releaseMethod?: string;   // Cash | RTGS | NEFT | UPI | IMPS | Cheque
+  releaseBank?: string;
   status: TxnStatus;
   approvedBy?: string | null;
   approvedAt?: string | null;
@@ -124,6 +127,24 @@ export interface FundRequest {
   decidedBy: string | null;
 }
 
+export interface AdminFund {
+  id: string;
+  amount: number;
+  method: string;
+  note: string;
+  date: string;
+  addedBy: string;
+  addedByName: string;
+}
+
+export interface Expense {
+  id: string;
+  amount: number;
+  reason: string;
+  date: string;
+  createdBy: string;
+}
+
 export interface AppState {
   me: User;
   users: User[];
@@ -135,4 +156,7 @@ export interface AppState {
   customers: RegisteredCustomer[];
   billingConfig: BillingConfig;
   deletedTransactions: Txn[];
+  adminFunds: AdminFund[];
+  expenses: Expense[];
+  adminFundAvailable: number;
 }

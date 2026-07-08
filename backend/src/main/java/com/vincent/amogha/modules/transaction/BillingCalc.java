@@ -20,6 +20,15 @@ public final class BillingCalc {
 
     /** Recomputes net + amount for each item, returns rolled-up totals. */
     public static Txn.Totals computeTotals(List<Txn.TxnItem> items, double margin, double charges) {
+        return computeTotals(items, margin, charges, 0);
+    }
+
+    /**
+     * Recomputes net + amount for each item and rolls up the totals.
+     * Amount Payable (net to the customer) = gross − margin − billing charges − release amount.
+     * The release amount is the part paid to the bank to release the customer's pledged gold.
+     */
+    public static Txn.Totals computeTotals(List<Txn.TxnItem> items, double margin, double charges, double release) {
         double gross = 0, netW = 0;
         if (items != null) {
             for (Txn.TxnItem it : items) {
@@ -34,7 +43,8 @@ public final class BillingCalc {
         t.margin = margin;
         t.netAmount = gross - margin;
         t.billingCharges = charges;
-        t.amountPayable = Math.round(t.netAmount - charges);
+        t.releaseAmount = Math.max(0, release);
+        t.amountPayable = Math.round(t.netAmount - charges - t.releaseAmount);
         t.netWeight = netW;
         return t;
     }

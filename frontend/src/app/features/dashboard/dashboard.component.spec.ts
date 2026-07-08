@@ -12,7 +12,7 @@ function txn(over: Partial<Txn>): Txn {
     customer: { name: '', phone: '', address1: '', pincode: '', ...(over.customer || {}) } as any,
     idProofs: over.idProofs || [], reference: over.reference || {}, selfie: null,
     clientOtpVerified: false, article: '', items: [],
-    totals: { grossAmount: 0, margin: 0, netAmount: 0, billingCharges: 0, amountPayable: 1000, netWeight: 0 },
+    totals: { grossAmount: 0, margin: 0, netAmount: 0, billingCharges: 0, releaseAmount: 0, amountPayable: 1000, netWeight: 0 },
     status: 'approved',
     ...over,
   } as Txn;
@@ -29,7 +29,10 @@ describe('DashboardComponent search', () => {
   let cmp: DashboardComponent;
 
   beforeEach(() => {
-    const stub = { transactions: signal(TXNS), rates: signal({ gold: 8530, silver: 98, updatedAt: null, updatedBy: null }) };
+    const stub = {
+      transactions: signal(TXNS), rates: signal({ gold: 8530, silver: 98, updatedAt: null, updatedBy: null }),
+      isAdmin: () => true, me: signal({ id: 'u-admin', name: 'Admin', role: 'admin', phone: '' }), balanceOf: (_: string) => 0,
+    };
     TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [{ provide: StoreService, useValue: stub }, provideRouter([])],

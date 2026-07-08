@@ -10,7 +10,7 @@ const TXN = {
   customer: { name: 'RAVI', phone: '9800000000', address1: '', pincode: '' },
   idProofs: [], reference: {}, selfie: null, clientOtpVerified: false, article: 'RING',
   items: [{ article: 'RING', gross: 10, stone: 0, other: 0, net: 10, purity: 91.6, rate: 600, amount: 6000 }],
-  totals: { grossAmount: 6000, margin: 0, netAmount: 6000, billingCharges: 0, amountPayable: 6000, netWeight: 10 },
+  totals: { grossAmount: 6000, margin: 0, netAmount: 6000, billingCharges: 0, releaseAmount: 0, amountPayable: 6000, netWeight: 10 },
   status: 'pending',
 } as unknown as Txn;
 

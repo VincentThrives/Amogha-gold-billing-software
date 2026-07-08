@@ -25,6 +25,9 @@
       <a routerLink="/reports" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
         <i class="fa-solid fa-chart-pie"></i> Reports
       </a>
+      <a routerLink="/fund-reports" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+        <i class="fa-solid fa-hand-holding-dollar"></i> Fund Reports
+      </a>
       @if (store.isAdmin()) {
         <a routerLink="/deleted" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
           <i class="fa-solid fa-trash-can"></i> Deleted Invoices

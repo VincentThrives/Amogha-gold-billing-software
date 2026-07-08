@@ -31,6 +31,7 @@ export class DashboardComponent {
   });
   sumToday = computed(() => this.todayCount().reduce((s, t) => s + t.totals.amountPayable, 0));
   sumAll = computed(() => this.all().reduce((s, t) => s + t.totals.amountPayable, 0));
+  myBalance = computed(() => { const me = this.store.me(); return me ? this.store.balanceOf(me.id) : 0; });
 
   results = computed<Txn[]>(() => {
     const term = this.term().trim().toLowerCase();

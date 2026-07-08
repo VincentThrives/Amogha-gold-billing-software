@@ -131,23 +131,31 @@ class ApiIntegrationTest {
         Map r = call(HttpMethod.POST, "/api/transactions", bill(5000), admin()).getBody();
         assertTrue(((String) r.get("billNo")).matches("\\d{4}[0-9A-F]{6}"));
     }
-    @Test void employeeSubmit_createsPendingWithoutFundBlockOrDebit() {
-        String empT = employee();
-        Map r = call(HttpMethod.POST, "/api/transactions", bill(5000), empT).getBody();
+    @Test void employeeSubmit_createsPendingAndDoesNotDebitUntilApproval() {
+        String adminT = admin(), empT = employee();
+        fund(empT, adminT, 10000);
+        Map r = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
         assertEquals("pending", r.get("status"));   // staff bills wait for admin approval
-        // no debit at submit even with zero balance
+        // funds are NOT debited at submit — only on approval; balance stays put
         Map s = call(HttpMethod.GET, "/api/state", null, empT).getBody();
         String empId = (String) ((Map) s.get("me")).get("id");
-        Object bal = ((Map) s.get("balances")).get(empId);
-        assertTrue(bal == null || ((Number) bal).doubleValue() == 0.0);
+        assertEquals(10000.0, ((Number) ((Map) s.get("balances")).get(empId)).doubleValue());
+    }
+    @Test void submit_blockedWhenStaffFundsInsufficient() {
+        // A staff member with no funds cannot send a bill for approval — they must get funds approved first.
+        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/transactions", bill(6000), employee());
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        assertTrue(((String) r.getBody().get("error")).contains("Insufficient funds"));
     }
     @Test void adminSubmit_createsApprovedImmediately() {
         assertEquals("approved", call(HttpMethod.POST, "/api/transactions", bill(5000), admin()).getBody().get("status"));
     }
     @Test void employeeMarginAndChargesAreForcedToZeroAtSubmit() {
+        String adminT = admin(), empT = employee();
+        fund(empT, adminT, 10000);
         Map body = new java.util.HashMap<>(bill(6000));
         body.put("totals", Map.of("margin", 500, "billingCharges", 999)); // staff tries to set them
-        Map r = call(HttpMethod.POST, "/api/transactions", body, employee()).getBody();
+        Map r = call(HttpMethod.POST, "/api/transactions", body, empT).getBody();
         Map totals = (Map) r.get("totals");
         assertEquals(0.0, ((Number) totals.get("margin")).doubleValue());
         assertEquals(0.0, ((Number) totals.get("billingCharges")).doubleValue());
@@ -155,6 +163,8 @@ class ApiIntegrationTest {
 
     // ---------- APPROVAL ----------
     private void fund(String empT, String adminT, int amount) {
+        // admin must have their own capital before they can approve staff funds
+        call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", amount, "note", "seed"), adminT);
         Map fr = call(HttpMethod.POST, "/api/funds", Map.of("amount", amount), empT).getBody();
         call(HttpMethod.POST, "/api/funds/" + fr.get("id") + "/decide", Map.of("approve", true, "method", "Cash"), adminT);
     }
@@ -185,20 +195,47 @@ class ApiIntegrationTest {
         String empId = (String) ((Map) s.get("me")).get("id");
         assertEquals(488100.0, ((Number) ((Map) s.get("balances")).get(empId)).doubleValue()); // 500000 - 11900
     }
-    @Test void approval_blockedWhenStaffFundsInsufficient() {
-        String adminT = admin(), empT = employee();
-        Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
-        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/approve",
-                Map.of("margin", 0, "billingCharges", 0), adminT);
-        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
-        assertTrue(((String) r.getBody().get("error")).contains("insufficient funds"));
-    }
     @Test void employeeCannotApprove() {
-        String empT = employee();
+        String adminT = admin(), empT = employee();
+        fund(empT, adminT, 10000);
         Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
         assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/approve",
                 Map.of("margin", 0, "billingCharges", 0), empT).getStatusCode());
     }
+    // ---------- RELEASE AMOUNT ----------
+    private Map billWithRelease(double release, String method, String bank) {
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("metal", "gold");
+        body.put("customer", Map.of("name", "Cust", "phone", "9812345678"));
+        body.put("items", List.of(Map.of("gross", 100, "stone", 0, "other", 0, "purity", 100, "rate", 5000))); // gross 5,00,000
+        body.put("totals", Map.of("margin", 0, "billingCharges", 0, "releaseAmount", release));
+        if (method != null) body.put("releaseMethod", method);
+        if (bank != null) body.put("releaseBank", bank);
+        return body;
+    }
+    @Test void release_deductsFromPayableAndDebitsPayoutOnly() {
+        String adminT = admin(), empT = employee();
+        fund(empT, adminT, 600000);
+        Map t = call(HttpMethod.POST, "/api/transactions", billWithRelease(300000, "RTGS", "HDFC Bank"), empT).getBody();
+        assertEquals("pending", t.get("status"));
+        assertEquals(200000L, ((Number) ((Map) t.get("totals")).get("amountPayable")).longValue()); // 5L - 3L
+        Map approved = call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/approve",
+                Map.of("margin", 0, "billingCharges", 0, "releaseAmount", 300000, "releaseMethod", "RTGS", "releaseBank", "HDFC Bank"), adminT).getBody();
+        assertEquals(200000L, ((Number) ((Map) approved.get("totals")).get("amountPayable")).longValue());
+        assertEquals(300000.0, ((Number) ((Map) approved.get("totals")).get("releaseAmount")).doubleValue());
+        // wallet debited by the customer payout only (release is paid to the bank separately): 6L - 2L = 4L
+        Map s = call(HttpMethod.GET, "/api/state", null, empT).getBody();
+        assertEquals(400000.0, ((Number) ((Map) s.get("balances")).get("u-emp1")).doubleValue());
+    }
+    @Test void release_cannotExceedGross() {
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/transactions", billWithRelease(600000, "RTGS", "HDFC Bank"), employee()).getStatusCode());
+    }
+    @Test void release_requiresMethodAndBank() {
+        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/transactions", billWithRelease(300000, null, null), employee());
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        assertTrue(((String) r.getBody().get("error")).contains("release amount was paid"));
+    }
+
     // ---------- SOFT DELETE / RECYCLE BIN ----------
     @Test void softDelete_removesFromActiveAddsToRecycleAndRefundsStaff() {
         String adminT = admin(), empT = employee();
@@ -239,6 +276,7 @@ class ApiIntegrationTest {
     }
     @Test void pendingBillCannotBeDeleted() {
         String adminT = admin(), empT = employee();
+        fund(empT, adminT, 10000);
         Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody(); // pending
         assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/delete", Map.of(), adminT).getStatusCode());
     }
@@ -250,6 +288,7 @@ class ApiIntegrationTest {
 
     @Test void rejectSetsStatusRejected() {
         String adminT = admin(), empT = employee();
+        fund(empT, adminT, 10000);
         Map t = call(HttpMethod.POST, "/api/transactions", bill(6000), empT).getBody();
         assertEquals("rejected", call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/reject", Map.of(), adminT).getBody().get("status"));
     }
@@ -290,6 +329,7 @@ class ApiIntegrationTest {
     }
     @Test void approvingFundStoresMethodAndReference() {
         String adminT = admin(), empT = employee();
+        call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 5000, "note", "seed"), adminT);
         Map fr = call(HttpMethod.POST, "/api/funds", Map.of("amount", 5000), empT).getBody();
         call(HttpMethod.POST, "/api/funds/" + fr.get("id") + "/decide",
                 Map.of("approve", true, "method", "NEFT", "reference", "TXN12345"), adminT);
@@ -301,6 +341,69 @@ class ApiIntegrationTest {
     }
     @Test void adminCannotRequestFunds() {
         assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/funds", Map.of("amount", 1000), admin()).getStatusCode());
+    }
+
+    // ---------- ADMIN FUND POOL / EXPENSES ----------
+    @Test void adminAddsFund_reflectedInAvailable() {
+        String adminT = admin();
+        call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 500000, "note", "cash deposit"), adminT);
+        Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        assertEquals(500000.0, ((Number) s.get("adminFundAvailable")).doubleValue());
+        assertEquals(1, ((List) s.get("adminFunds")).size());
+    }
+    @Test void adminFund_recordsMethodDateAndAddedBy() {
+        String adminT = admin();
+        call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 250000, "method", "RTGS", "note", "HDFC transfer"), adminT);
+        Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        Map f = (Map) ((List) s.get("adminFunds")).get(0);
+        assertEquals("RTGS", f.get("method"));
+        assertEquals("HDFC transfer", f.get("note"));
+        assertEquals("Amogha Admin", f.get("addedByName"));   // captured from the principal
+        assertNotNull(f.get("date"));
+    }
+    @Test void expenseReducesAvailable() {
+        String adminT = admin();
+        call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 100000, "note", "seed"), adminT);
+        call(HttpMethod.POST, "/api/expenses", Map.of("amount", 2500, "reason", "shop rent"), adminT);
+        Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        assertEquals(97500.0, ((Number) s.get("adminFundAvailable")).doubleValue()); // 100000 - 2500
+        assertEquals(1, ((List) s.get("expenses")).size());
+    }
+    @Test void expenseRequiresReason() {
+        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/expenses", Map.of("amount", 100), admin());
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        assertTrue(((String) r.getBody().get("error")).contains("reason"));
+    }
+    @Test void employeeCannotAddFundOrExpense() {
+        String empT = employee();
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 1000, "note", "x"), empT).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/expenses", Map.of("amount", 100, "reason", "x"), empT).getStatusCode());
+    }
+    @Test void approvingFund_blockedWhenAdminCapitalShort() {
+        String adminT = admin(), empT = employee();
+        call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 3000, "note", "seed"), adminT); // only 3000
+        Map fr = call(HttpMethod.POST, "/api/funds", Map.of("amount", 5000), empT).getBody();
+        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/funds/" + fr.get("id") + "/decide", Map.of("approve", true, "method", "Cash"), adminT);
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        assertTrue(((String) r.getBody().get("error")).contains("Insufficient admin funds"));
+    }
+    @Test void approvingFund_succeedsAfterTopUp_drawsDownAvailable() {
+        String adminT = admin(), empT = employee();
+        call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 5000, "note", "seed"), adminT);
+        Map fr = call(HttpMethod.POST, "/api/funds", Map.of("amount", 5000), empT).getBody();
+        call(HttpMethod.POST, "/api/funds/" + fr.get("id") + "/decide", Map.of("approve", true, "method", "Cash"), adminT);
+        Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        assertEquals(0.0, ((Number) s.get("adminFundAvailable")).doubleValue());          // 5000 - 5000
+        assertEquals(5000.0, ((Number) ((Map) s.get("balances")).get("u-emp1")).doubleValue());
+    }
+    @Test void employeeStateHidesAdminLedger() {
+        String adminT = admin(), empT = employee();
+        call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 5000, "note", "seed"), adminT);
+        call(HttpMethod.POST, "/api/expenses", Map.of("amount", 100, "reason", "x"), adminT);
+        Map s = call(HttpMethod.GET, "/api/state", null, empT).getBody();
+        assertTrue(((List) s.get("adminFunds")).isEmpty());
+        assertTrue(((List) s.get("expenses")).isEmpty());
+        assertEquals(0.0, ((Number) s.get("adminFundAvailable")).doubleValue());
     }
 
     // ---------- CUSTOMERS ----------

@@ -5,8 +5,13 @@
 
 <div class="stats">
   <div class="stat"><div class="lbl">Total Transactions</div><div class="val">{{ store.transactions().length }}</div><div class="sub">all time</div></div>
-  <div class="stat"><div class="lbl">Today's Bills</div><div class="val">{{ todayCount().length }}</div><div class="sub">{{ inr0(sumToday()) }} paid</div></div>
-  <div class="stat"><div class="lbl">Total Paid Out</div><div class="val">{{ inr0(sumAll()) }}</div><div class="sub">all time</div></div>
+  <div class="stat"><div class="lbl">Today's Bills</div><div class="val">{{ todayCount().length }}</div>
+    @if (store.isAdmin()) { <div class="sub">{{ inr0(sumToday()) }} paid</div> } @else { <div class="sub">today</div> }</div>
+  @if (store.isAdmin()) {
+    <div class="stat"><div class="lbl">Total Paid Out</div><div class="val">{{ inr0(sumAll()) }}</div><div class="sub">all time</div></div>
+  } @else {
+    <div class="stat"><div class="lbl">My Fund Balance</div><div class="val">{{ inr0(myBalance()) }}</div><div class="sub">available to bill</div></div>
+  }
   <div class="stat"><div class="lbl">Gold Rate</div>
     <div class="val">{{ store.rates().gold ? inr0(store.rates().gold) + '/g' : 'not set' }}</div>
     <div class="sub">Silver {{ store.rates().silver ? inr0(store.rates().silver) + '/g' : '—' }}</div></div>

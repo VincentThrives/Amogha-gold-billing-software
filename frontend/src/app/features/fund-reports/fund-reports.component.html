@@ -1,0 +1,197 @@
+<div class="page-head">
+  <div><h2>Fund Reports</h2><p>{{ isAdmin() ? 'Your fund, staff approvals & expenses' : 'Funds approved to you' }} for a selected day or period</p></div>
+  <button class="btn btn-gold" [disabled]="busy()" (click)="downloadPdf()">
+    <i class="fa-solid fa-download"></i> Download PDF
+  </button>
+</div>
+
+<!-- Date range -->
+<div class="card">
+  <div class="range">
+    <div class="field"><label>From date</label><input type="date" [ngModel]="from()" (ngModelChange)="from.set($event)" [max]="to()"></div>
+    <div class="field"><label>To date</label><input type="date" [ngModel]="to()" (ngModelChange)="to.set($event)" [min]="from()"></div>
+    <div class="range-presets">
+      <button class="btn btn-sm btn-ghost" (click)="setToday()">Today</button>
+      <button class="btn btn-sm btn-ghost" (click)="setMonth()">This month</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin: add fund + add expense -->
+@if (isAdmin()) {
+  <div class="grid grid-2">
+    <div class="card">
+      <h3><i class="fa-solid fa-money-bill-wave"></i> Add my fund</h3>
+      <div class="grid grid-2" style="align-items:end">
+        <div class="field"><label>Amount (₹)</label><input type="number" min="0" [(ngModel)]="fundAmount" placeholder="e.g. 500000"></div>
+        <div class="field"><label>Added via <span class="req">*</span></label>
+          <select [(ngModel)]="fundMethod">
+            <option value="">— select —</option>
+            @for (m of FUND_METHODS; track m) { <option [value]="m">{{ m }}</option> }
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top:8px"><label>Note (optional)</label><input [(ngModel)]="fundNote" placeholder="e.g. cash deposit"></div>
+      <button class="btn btn-gold" style="margin-top:10px" [disabled]="busy()" (click)="addFund()"><i class="fa-solid fa-plus"></i> Add fund</button>
+    </div>
+    <div class="card">
+      <h3><i class="fa-solid fa-receipt"></i> Add expense</h3>
+      <div class="grid grid-2" style="align-items:end">
+        <div class="field"><label>Amount (₹)</label><input type="number" min="0" [(ngModel)]="expAmount" placeholder="e.g. 2500"></div>
+        <div class="field"><label>Reason <span class="req">*</span></label><input [(ngModel)]="expReason" placeholder="e.g. shop rent"></div>
+      </div>
+      <button class="btn btn-err" style="margin-top:10px" [disabled]="busy()" (click)="addExpense()"><i class="fa-solid fa-minus"></i> Record expense</button>
+    </div>
+  </div>
+}
+
+<div id="fundReportDoc">
+  <div class="rep-doc-head">
+    <div class="rep-doc-title">{{ company()?.name || 'Amogha Gold Company' }}</div>
+    <div class="rep-doc-sub">Fund report · {{ from() }} to {{ to() }}</div>
+  </div>
+
+  @if (isAdmin()) {
+    <!-- Admin cards -->
+    <div class="report-cards four">
+      <div class="rep-card cap-c">
+        <div class="rep-metal"><i class="fa-solid fa-hand-holding-dollar"></i> Capital added</div>
+        <div class="rep-grams">{{ inr0(capitalAdded()) }}</div>
+        <div class="rep-amt">in this period</div>
+      </div>
+      <div class="rep-card appr-c">
+        <div class="rep-metal"><i class="fa-solid fa-users"></i> Approved to staff</div>
+        <div class="rep-grams">{{ inr0(approvedTotal()) }}</div>
+        <div class="rep-amt">{{ approvedFunds().length }} approval{{ approvedFunds().length === 1 ? '' : 's' }}</div>
+      </div>
+      <div class="rep-card exp-c">
+        <div class="rep-metal"><i class="fa-solid fa-receipt"></i> Expenses</div>
+        <div class="rep-grams">{{ inr0(expensesTotal()) }}</div>
+        <div class="rep-amt">{{ expensesInPeriod().length }} entr{{ expensesInPeriod().length === 1 ? 'y' : 'ies' }}</div>
+      </div>
+      <div class="rep-card avail-c">
+        <div class="rep-metal"><i class="fa-solid fa-wallet"></i> Available now</div>
+        <div class="rep-grams" [class.neg]="availableNow() < 0">{{ inr0(availableNow()) }}</div>
+        <div class="rep-amt">capital − approved − expenses</div>
+      </div>
+    </div>
+
+    <!-- My fund additions (record of every top-up) -->
+    <div class="card">
+      <h3>My fund additions ({{ adminFundsInPeriod().length }})</h3>
+      @if (!adminFundsInPeriod().length) {
+        <div class="empty"><i class="fa-solid fa-money-bill-wave"></i>No fund added in the selected period.</div>
+      } @else {
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Note</th><th>Added by</th></tr></thead>
+          <tbody>
+            @for (f of adminFundsInPeriod(); track f.id) {
+              <tr>
+                <td>{{ date(f.date) }}</td>
+                <td><b>{{ inr0(f.amount) }}</b></td>
+                <td>{{ f.method || '—' }}</td>
+                <td>{{ f.note || '—' }}</td>
+                <td>{{ addedByName(f) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table></div>
+      }
+    </div>
+
+    <!-- Per-employee approved totals -->
+    <div class="card">
+      <h3>Funds approved per employee</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Employee</th><th>Approvals (period)</th><th>Approved (period)</th><th>Wallet balance (now)</th></tr></thead>
+        <tbody>
+          @for (e of employeeRows(); track e.id) {
+            <tr>
+              <td><b>{{ e.name }}</b></td>
+              <td>{{ e.count }}</td>
+              <td><b>{{ inr0(e.total) }}</b></td>
+              <td>{{ inr0(e.balance) }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="muted" style="text-align:center">No employees.</td></tr>
+          }
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- Approvals in the period -->
+    <div class="card">
+      <h3>Fund approvals ({{ approvedFunds().length }})</h3>
+      @if (!approvedFunds().length) {
+        <div class="empty"><i class="fa-solid fa-wallet"></i>No fund approvals in the selected period.</div>
+      } @else {
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th>Employee</th><th>Amount</th><th>Method</th><th>Note</th></tr></thead>
+          <tbody>
+            @for (f of approvedFunds(); track f.id) {
+              <tr>
+                <td>{{ date(f.decidedAt || f.requestedAt) }}</td>
+                <td>{{ f.employeeName }}</td>
+                <td><b>{{ inr0(f.amount) }}</b></td>
+                <td>{{ f.method || '—' }}</td>
+                <td>{{ f.note || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table></div>
+      }
+    </div>
+
+    <!-- Expenses in the period -->
+    <div class="card">
+      <h3>Expenses ({{ expensesInPeriod().length }})</h3>
+      @if (!expensesInPeriod().length) {
+        <div class="empty"><i class="fa-solid fa-receipt"></i>No expenses in the selected period.</div>
+      } @else {
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th>Amount</th><th>Reason</th></tr></thead>
+          <tbody>
+            @for (x of expensesInPeriod(); track x.id) {
+              <tr><td>{{ date(x.date) }}</td><td><b>{{ inr0(x.amount) }}</b></td><td>{{ x.reason }}</td></tr>
+            }
+          </tbody>
+        </table></div>
+      }
+    </div>
+  } @else {
+    <!-- Employee self-view -->
+    <div class="report-cards">
+      <div class="rep-card appr-c">
+        <div class="rep-metal"><i class="fa-solid fa-hand-holding-dollar"></i> Funds approved to me</div>
+        <div class="rep-grams">{{ inr0(myApprovedTotal()) }}</div>
+        <div class="rep-amt">in this period · {{ approvedFunds().length }} approval{{ approvedFunds().length === 1 ? '' : 's' }}</div>
+      </div>
+      <div class="rep-card avail-c">
+        <div class="rep-metal"><i class="fa-solid fa-wallet"></i> My wallet balance</div>
+        <div class="rep-grams">{{ inr0(myBalance()) }}</div>
+        <div class="rep-amt">available to bill now</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>My approved funds ({{ approvedFunds().length }})</h3>
+      @if (!approvedFunds().length) {
+        <div class="empty"><i class="fa-solid fa-wallet"></i>No funds approved to you in the selected period.</div>
+      } @else {
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Note</th></tr></thead>
+          <tbody>
+            @for (f of approvedFunds(); track f.id) {
+              <tr>
+                <td>{{ date(f.decidedAt || f.requestedAt) }}</td>
+                <td><b>{{ inr0(f.amount) }}</b></td>
+                <td>{{ f.method || '—' }}</td>
+                <td>{{ f.note || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table></div>
+      }
+    </div>
+  }
+</div>

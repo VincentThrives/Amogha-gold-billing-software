@@ -67,11 +67,7 @@
             <td>{{ net(it).toFixed(2) }}</td>
             <td><input type="number" min="0" max="100" step="0.01" style="width:75px" [(ngModel)]="it.purity"></td>
             <td>
-              @if (store.isAdmin()) {
-                <input [id]="'i_rate_' + $index" class="i_rate" type="number" min="0" step="0.01" style="width:95px" [(ngModel)]="it.rate">
-              } @else {
-                <input [id]="'i_rate_' + $index" class="i_rate rate-locked" type="number" style="width:95px" [ngModel]="it.rate" readonly title="Rate is fixed by the admin">
-              }
+              <input [id]="'i_rate_' + $index" class="i_rate" type="number" min="0" step="0.01" style="width:95px" [(ngModel)]="it.rate">
             </td>
             <td class="right">{{ inr2(amount(it)) }}</td>
             <td><button type="button" class="btn btn-sm btn-ghost" [disabled]="items().length === 1"
@@ -86,21 +82,28 @@
     <button type="button" class="btn btn-sm btn-ghost" (click)="addItem(true)"><i class="fa-solid fa-plus"></i> Add item</button>
     <span class="hintline">{{ items().length }} item{{ items().length === 1 ? '' : 's' }} · net {{ totals().netWeight.toFixed(2) }} g</span>
   </div>
-  @if (store.isAdmin()) {
-    <p class="hintline">Each item needs its own name &amp; gross weight. Rate is pre-filled from the {{ metal }} rate ({{ fixedRate ? inr0(fixedRate) + '/g' : 'not set' }}) and can be edited per item.</p>
-  } @else if (fixedRate) {
-    <p class="hintline"><i class="fa-solid fa-lock"></i> {{ cap(metal) }} rate is fixed by the admin at {{ inr0(fixedRate) }}/g.</p>
-  } @else {
-    <p class="hintline err"><i class="fa-solid fa-triangle-exclamation"></i> {{ cap(metal) }} rate is not set — ask the admin to set it before billing.</p>
-  }
+  <p class="hintline">Each item needs its own name &amp; gross weight. The {{ metal }} rate is pre-filled from the admin's rate ({{ fixedRate ? inr0(fixedRate) + '/g' : 'not set' }}) and can be edited per item before {{ store.isAdmin() ? 'generating the bill' : 'sending for approval' }}.</p>
 </div>
 
 <!-- Charges + totals -->
 <div class="card">
   <h3><i class="fa-solid fa-receipt"></i> Charges &amp; Total</h3>
 
+  <!-- Release amount (paid to the bank) — available to both staff & admin -->
+  <div class="grid grid-3" style="max-width:760px">
+    <div class="field"><label>Release Amount (₹ to bank)</label><input id="t_release" type="number" min="0" [(ngModel)]="release"></div>
+    <div class="field"><label>Paid via {{ release > 0 ? '' : '(if any)' }}</label>
+      <select id="t_release_method" [(ngModel)]="releaseMethod">
+        <option value="">— select —</option>
+        @for (m of RELEASE_METHODS; track m) { <option [value]="m">{{ m }}</option> }
+      </select>
+    </div>
+    <div class="field"><label>Bank</label><input id="t_release_bank" [(ngModel)]="releaseBank" placeholder="e.g. HDFC Bank"></div>
+  </div>
+  <p class="hintline"><i class="fa-solid fa-building-columns"></i> If part of the gold is released from a bank, enter the amount paid to the bank — it is deducted from the customer's payable.</p>
+
   @if (store.isAdmin()) {
-    <div class="grid grid-2" style="max-width:520px">
+    <div class="grid grid-2" style="max-width:520px;margin-top:6px">
       <div class="field"><label>Margin (₹ deducted)</label><input type="number" min="0" [(ngModel)]="margin"></div>
       <div class="field"><label>Billing Charges (₹ deducted)</label><input type="number" min="0" [(ngModel)]="charges"></div>
     </div>
@@ -109,11 +112,14 @@
       <div class="line"><span>Margin</span><b>{{ inr2(totals().margin) }}</b></div>
       <div class="line"><span>Net Amount</span><b>{{ inr2(totals().netAmount) }}</b></div>
       <div class="line"><span>Billing Charges</span><b>{{ inr2(totals().billingCharges) }}</b></div>
+      @if (release > 0) { <div class="line"><span>Release Amount{{ releaseBank ? ' — ' + releaseBank : '' }}{{ releaseMethod ? ' (' + releaseMethod + ')' : '' }}</span><b>{{ inr2(totals().releaseAmount) }}</b></div> }
       <div class="line big"><span>Amount Payable</span><b>{{ inr0(totals().amountPayableRounded) }}</b></div>
     </div>
   } @else {
-    <div class="totbox" style="margin-top:4px">
-      <div class="line big"><span>Gross Amount</span><b>{{ inr2(totals().grossAmount) }}</b></div>
+    <div class="totbox" style="margin-top:8px">
+      <div class="line"><span>Gross Amount</span><b>{{ inr2(totals().grossAmount) }}</b></div>
+      @if (release > 0) { <div class="line"><span>Release Amount{{ releaseBank ? ' — ' + releaseBank : '' }}{{ releaseMethod ? ' (' + releaseMethod + ')' : '' }}</span><b>{{ inr2(totals().releaseAmount) }}</b></div> }
+      <div class="line big"><span>Net Payable</span><b>{{ inr0(totals().amountPayableRounded) }}</b></div>
     </div>
     <p class="hintline"><i class="fa-solid fa-circle-info"></i> Margin &amp; billing charges are applied by the admin when they approve this bill.</p>
   }

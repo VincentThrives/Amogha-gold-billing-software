@@ -55,6 +55,26 @@ export class ReportsComponent {
     return { goldG, goldAmt, silverG, silverAmt, total: goldAmt + silverAmt, count: this.rows().length };
   });
 
+  company = computed(() => this.store.company());
+  busy = signal(false);
+
   setToday() { this.from.set(todayISO()); this.to.set(todayISO()); }
   setMonth() { this.from.set(monthStartISO()); this.to.set(todayISO()); }
+
+  async downloadPdf() {
+    const el = document.getElementById('salesReportDoc');
+    if (!el) return;
+    this.busy.set(true);
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      await html2pdf().set({
+        margin: 6,
+        filename: `Amogha_Sales_${this.from()}_to_${this.to()}.pdf`,
+        image: { type: 'jpeg', quality: 0.97 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+      }).from(el).save();
+    } catch { window.print(); }
+    finally { this.busy.set(false); }
+  }
 }

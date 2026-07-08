@@ -72,6 +72,9 @@
           <tr><td>Margin (INR)</td><td>{{ inr2(txn.totals.margin) }}</td></tr>
           <tr><td>Billing Charges (INR)</td><td>{{ inr2(txn.totals.billingCharges) }}</td></tr>
           <tr><td>Net Amount (INR)</td><td>{{ inr2(txn.totals.netAmount) }}</td></tr>
+          @if (txn.totals.releaseAmount > 0) {
+            <tr><td>Release Amount{{ txn.releaseBank ? ' — ' + txn.releaseBank : '' }}{{ txn.releaseMethod ? ' (' + txn.releaseMethod + ')' : '' }} (INR)</td><td>{{ inr2(txn.totals.releaseAmount) }}</td></tr>
+          }
           <tr><td><b>Amount Payable</b></td><td><b>{{ inr0(txn.totals.amountPayable) }}</b></td></tr>
         </tbody>
       </table>
