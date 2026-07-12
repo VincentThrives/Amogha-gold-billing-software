@@ -77,7 +77,10 @@ public class StateController {
         out.put("company", companies.findById("company").orElse(null));
         out.put("rates", rates.findById("rates").orElse(null));
         var allTxns = txns.findAllByOrderByDateDesc();
-        out.put("transactions", allTxns.stream().filter(t -> !t.deleted).toList());       // active only
+        // Admin sees every active bill; an employee sees only the bills they submitted
+        // (admin-created bills and other employees' bills stay out of their view).
+        var active = allTxns.stream().filter(t -> !t.deleted);
+        out.put("transactions", (isAdmin ? active : active.filter(t -> me.id.equals(t.employeeId))).toList());
         out.put("deletedTransactions", isAdmin
                 ? allTxns.stream().filter(t -> t.deleted).toList() : java.util.List.of()); // recycle bin (admin)
         out.put("funds", fundList);

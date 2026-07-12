@@ -1,11 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { TxnTableComponent } from './txn-table.component';
-import { StoreService } from '../../core/services/store.service';
 import { Txn } from '../../core/models';
-
-let adminFlag = true;
-const storeStub = { isAdmin: () => adminFlag };
 
 function txn(id: string, name: string): Txn {
   return {
@@ -18,10 +14,8 @@ function txn(id: string, name: string): Txn {
 }
 
 describe('TxnTableComponent', () => {
-  beforeEach(() => { adminFlag = true; });
-
   function render(rows: Txn[]) {
-    TestBed.configureTestingModule({ imports: [TxnTableComponent], providers: [{ provide: StoreService, useValue: storeStub }, provideRouter([])] });
+    TestBed.configureTestingModule({ imports: [TxnTableComponent], providers: [provideRouter([])] });
     const f = TestBed.createComponent(TxnTableComponent);
     f.componentInstance.rows = rows;
     f.detectChanges();
@@ -40,20 +34,14 @@ describe('TxnTableComponent', () => {
     expect(el.querySelector('table')).toBeNull();
   });
 
-  it('shows the Payable amount to an admin but hides it from an employee', () => {
-    const adminEl = render([txn('1', 'A')]);
-    expect(adminEl.querySelector('thead')!.textContent).toContain('Payable');
-    expect(adminEl.querySelector('tbody tr')!.textContent).toContain('1,000');
-
-    TestBed.resetTestingModule();
-    adminFlag = false;
-    const empEl = render([txn('1', 'A')]);
-    expect(empEl.querySelector('thead')!.textContent).not.toContain('Payable');
-    expect(empEl.querySelector('tbody tr')!.textContent).not.toContain('1,000');
+  it('shows an Amount column with the billed amount', () => {
+    const el = render([txn('1', 'A')]);
+    expect(el.querySelector('thead')!.textContent).toContain('Amount');
+    expect(el.querySelector('tbody tr')!.textContent).toContain('1,000');
   });
 
   it('emits (delete) when allowDelete is on and the trash button is clicked', () => {
-    TestBed.configureTestingModule({ imports: [TxnTableComponent], providers: [{ provide: StoreService, useValue: storeStub }, provideRouter([])] });
+    TestBed.configureTestingModule({ imports: [TxnTableComponent], providers: [provideRouter([])] });
     const f = TestBed.createComponent(TxnTableComponent);
     f.componentInstance.rows = [txn('1', 'A')];
     f.componentInstance.allowDelete = true;

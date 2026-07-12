@@ -26,7 +26,6 @@ export class ShellComponent implements OnInit, OnDestroy {
     { path: '/new', icon: 'fa-plus', label: 'New Transaction' },
     { path: '/transactions', icon: 'fa-list', label: 'Transaction List' },
     { path: '/rate', icon: 'fa-coins', label: 'Gold / Silver Rate' },
-    { path: '/funds', icon: 'fa-wallet', label: 'Fund Approvals' },
   ];
 
   inr0 = (n: number) => inr(n, 0);

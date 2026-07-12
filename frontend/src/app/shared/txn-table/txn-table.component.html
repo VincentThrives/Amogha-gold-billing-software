@@ -4,7 +4,7 @@
   <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>Bill ID</th><th>Customer</th><th>Phone</th><th>Metal</th><th>Net Wt</th>@if (store.isAdmin()) {<th>Payable</th>}<th>Status</th><th>Date</th><th></th></tr>
+        <tr><th>Bill ID</th><th>Customer</th><th>Phone</th><th>Metal</th><th>Net Wt</th><th>Amount</th><th>Status</th><th>Date</th><th></th></tr>
       </thead>
       <tbody>
         @for (t of rows; track t.id) {
@@ -14,7 +14,7 @@
             <td>{{ t.customer.phone || '—' }}</td>
             <td><span class="badge" [ngClass]="t.metal">{{ t.metal }}</span></td>
             <td>{{ t.totals.netWeight.toFixed(2) }} g</td>
-            @if (store.isAdmin()) { <td><b>{{ inr0(t.totals.amountPayable) }}</b></td> }
+            <td><b>{{ inr0(t.totals.amountPayable) }}</b></td>
             <td><span class="badge" [ngClass]="t.status || 'approved'">{{ t.status || 'approved' }}</span></td>
             <td>{{ date(t.date) }}</td>
             <td class="right">

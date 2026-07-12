@@ -5,3 +5,9 @@ de:
     mongodb:
       embedded:
         version: 7.0.4
+
+# Local dev convenience: keep the login token alive for 30 days so testing
+# across restarts / overnight doesn't silently log you out mid-session.
+app:
+  jwt:
+    ttl-minutes: 43200

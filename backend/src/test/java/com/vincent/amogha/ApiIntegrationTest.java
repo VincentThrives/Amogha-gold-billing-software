@@ -95,6 +95,18 @@ class ApiIntegrationTest {
         assertEquals(1, ((List) s.get("users")).size());
         assertEquals("employee", ((Map) s.get("me")).get("role"));
     }
+    @Test void employeeState_seesOnlyOwnTransactions() {
+        String adminT = admin(), empT = employee();
+        call(HttpMethod.POST, "/api/transactions", bill(5000), adminT);   // admin bill (employeeId u-admin)
+        fund(empT, adminT, 10000);
+        call(HttpMethod.POST, "/api/transactions", bill(6000), empT);      // employee's own bill (pending)
+        // employee sees only their own bill, not the admin's
+        List empTxns = (List) call(HttpMethod.GET, "/api/state", null, empT).getBody().get("transactions");
+        assertEquals(1, empTxns.size());
+        assertEquals("u-emp1", ((Map) empTxns.get(0)).get("employeeId"));
+        // admin sees both bills
+        assertEquals(2, ((List) call(HttpMethod.GET, "/api/state", null, adminT).getBody().get("transactions")).size());
+    }
 
     // ---------- RATES / COMPANY / USERS ----------
     @Test void employeeCannotSetRates() {

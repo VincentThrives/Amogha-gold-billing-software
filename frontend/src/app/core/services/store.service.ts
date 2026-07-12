@@ -31,6 +31,7 @@ export class StoreService {
   readonly isAdmin = computed(() => this.me()?.role === 'admin');
   readonly latestTxns = computed(() => latestPerCustomer(this.transactions()));
   readonly pendingTxns = computed(() => this.transactions().filter(t => t.status === 'pending'));
+  readonly pendingFunds = computed(() => this.funds().filter(f => f.status === 'pending'));
 
   customerById(id: string): RegisteredCustomer | undefined { return this.customers().find(c => c.id === id); }
   /** search registered customers by name or phone (case-insensitive) */

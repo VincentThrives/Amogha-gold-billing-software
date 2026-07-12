@@ -10,6 +10,10 @@
           <i class="fa-solid" [ngClass]="item.icon"></i> {{ item.label }}
         </a>
       }
+      <a routerLink="/funds" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+        <i class="fa-solid fa-wallet"></i> Fund Approvals
+        @if (store.isAdmin() && store.pendingFunds().length) { <span class="nav-badge">{{ store.pendingFunds().length }}</span> }
+      </a>
       @if (store.isAdmin()) {
         <a routerLink="/approvals" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
           <i class="fa-solid fa-file-circle-check"></i> Bill Approvals
