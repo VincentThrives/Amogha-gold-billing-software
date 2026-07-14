@@ -71,6 +71,11 @@ export class FundReportsComponent {
     });
   });
 
+  /** total funds currently held in all staff wallets (given out, not yet billed) */
+  staffAvailable = computed(() => this.employeeRows().reduce((s, e) => s + e.balance, 0));
+  /** whole business's spendable cash right now: admin available + all staff wallets */
+  totalAvailable = computed(() => this.availableNow() + this.staffAvailable());
+
   // employee self-view
   myApprovedTotal = computed(() => this.approvedFunds().reduce((s, f) => s + f.amount, 0));
   myBalance = computed(() => { const me = this.store.me(); return me ? this.store.balanceOf(me.id) : 0; });

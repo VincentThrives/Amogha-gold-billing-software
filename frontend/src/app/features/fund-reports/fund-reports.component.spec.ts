@@ -49,6 +49,8 @@ describe('FundReportsComponent (admin)', () => {
     expect(cmp.approvedTotal()).toBe(5000);
     expect(cmp.expensesTotal()).toBe(2000);
     expect(cmp.availableNow()).toBe(3000);
+    expect(cmp.staffAvailable()).toBe(5000);        // one employee wallet holding 5000
+    expect(cmp.totalAvailable()).toBe(8000);        // admin 3000 + staff 5000
   });
 
   it('builds a per-employee approved + balance row', () => {

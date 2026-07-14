@@ -56,8 +56,12 @@
       </a>
       <div class="topbar-right">
         @if (store.me()?.role === 'employee') {
-          <span class="wallet-chip" title="Available billing funds">
+          <span class="wallet-chip" title="Your available billing funds">
             <i class="fa-solid fa-wallet"></i> <b>{{ inr0(store.balanceOf(store.me()!.id)) }}</b>
+          </span>
+        } @else if (store.isAdmin()) {
+          <span class="wallet-chip" title="Available fund (capital added − approved to staff − expenses)">
+            <i class="fa-solid fa-wallet"></i> <b>{{ inr0(store.adminFundAvailable()) }}</b>
           </span>
         }
         <span class="user-chip"><i class="fa-solid fa-circle-user"></i>

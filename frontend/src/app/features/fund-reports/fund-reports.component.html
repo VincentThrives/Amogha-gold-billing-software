@@ -53,7 +53,7 @@
 
   @if (isAdmin()) {
     <!-- Admin cards -->
-    <div class="report-cards four">
+    <div class="report-cards five">
       <div class="rep-card cap-c">
         <div class="rep-metal"><i class="fa-solid fa-hand-holding-dollar"></i> Capital added</div>
         <div class="rep-grams">{{ inr0(capitalAdded()) }}</div>
@@ -69,10 +69,15 @@
         <div class="rep-grams">{{ inr0(expensesTotal()) }}</div>
         <div class="rep-amt">{{ expensesInPeriod().length }} entr{{ expensesInPeriod().length === 1 ? 'y' : 'ies' }}</div>
       </div>
-      <div class="rep-card avail-c">
-        <div class="rep-metal"><i class="fa-solid fa-wallet"></i> Available now</div>
-        <div class="rep-grams" [class.neg]="availableNow() < 0">{{ inr0(availableNow()) }}</div>
-        <div class="rep-amt">capital − approved − expenses</div>
+      <div class="rep-card staff-c">
+        <div class="rep-metal"><i class="fa-solid fa-users-gear"></i> Available with staff</div>
+        <div class="rep-grams">{{ inr0(staffAvailable()) }}</div>
+        <div class="rep-amt">in all staff wallets now</div>
+      </div>
+      <div class="rep-card total-c">
+        <div class="rep-metal"><i class="fa-solid fa-wallet"></i> Total available (admin + staff)</div>
+        <div class="rep-grams" [class.neg]="totalAvailable() < 0">{{ inr0(totalAvailable()) }}</div>
+        <div class="rep-amt">admin {{ inr0(availableNow()) }} + staff {{ inr0(staffAvailable()) }}</div>
       </div>
     </div>
 
