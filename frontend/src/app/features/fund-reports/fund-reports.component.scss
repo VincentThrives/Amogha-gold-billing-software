@@ -29,6 +29,16 @@
 .rep-grams.neg { color: #dc2626; }
 .rep-amt { font-size: 12px; color: var(--muted, #6b7280); }
 
+/* Compact layout used only while exporting to PDF so the cards fit the A4 page */
+.pdf-export { width: 720px; }
+.pdf-export .report-cards, .pdf-export .report-cards.four, .pdf-export .report-cards.five {
+  grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;
+}
+.pdf-export .rep-card { padding: 9px 11px; border-top-width: 3px; box-shadow: none; }
+.pdf-export .rep-metal { font-size: 10.5px; }
+.pdf-export .rep-grams { font-size: 16px; margin: 3px 0 1px; }
+.pdf-export .rep-amt { font-size: 9.5px; }
+
 @media (max-width: 1150px) {
   .report-cards.five { grid-template-columns: repeat(3, 1fr); }
 }

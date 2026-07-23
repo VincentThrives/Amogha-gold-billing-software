@@ -117,16 +117,18 @@ export class FundReportsComponent {
     const el = document.getElementById('fundReportDoc');
     if (!el) return;
     this.busy.set(true);
+    el.classList.add('pdf-export');   // shrink + wrap the cards so they fit the A4 page
     try {
       const html2pdf = (await import('html2pdf.js')).default;
       await html2pdf().set({
-        margin: 6,
+        margin: 8,
         filename: `Amogha_Fund_Report_${this.from()}_to_${this.to()}.pdf`,
         image: { type: 'jpeg', quality: 0.97 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, windowWidth: el.scrollWidth },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] },
       }).from(el).save();
     } catch { window.print(); }
-    finally { this.busy.set(false); }
+    finally { el.classList.remove('pdf-export'); this.busy.set(false); }
   }
 }
