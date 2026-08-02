@@ -3,5 +3,5 @@
 // The backend must allow this origin via its CORS_ORIGINS env var.
 export const environment = {
   production: true,
-  apiUrl: 'https://amogha-gold-billingsoftware.onrender.com',
+  apiUrl: 'https://amogha-gold-billing-software.onrender.com',
 };
