@@ -4,20 +4,27 @@ import com.vincent.amogha.common.ApiException;
 import com.vincent.amogha.common.Ids;
 import com.vincent.amogha.config.security.AmoghaPrincipal;
 import com.vincent.amogha.modules.fund.FundRepository;
+import com.vincent.amogha.modules.transaction.TxnRepository;
+import com.vincent.amogha.modules.user.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 
-/** Admin cash pool: capital the admin adds, minus funds approved to staff, minus shop expenses. */
+/** Admin cash pool: capital the admin adds, minus funds approved to staff, minus shop expenses,
+ *  minus the customer payout of bills the admin billed directly. */
 @Service
 public class LedgerService {
 
     private final AdminFundRepository adminFunds;
     private final ExpenseRepository expenses;
     private final FundRepository funds;
+    private final TxnRepository txns;
+    private final UserRepository users;
 
-    public LedgerService(AdminFundRepository adminFunds, ExpenseRepository expenses, FundRepository funds) {
+    public LedgerService(AdminFundRepository adminFunds, ExpenseRepository expenses, FundRepository funds,
+                         TxnRepository txns, UserRepository users) {
         this.adminFunds = adminFunds; this.expenses = expenses; this.funds = funds;
+        this.txns = txns; this.users = users;
     }
 
     public AdminFund addFund(double amount, String method, String note, AmoghaPrincipal principal) {
@@ -47,12 +54,21 @@ public class LedgerService {
         return expenses.save(e);
     }
 
-    /** Capital the admin has added, minus what has been approved to staff and spent on expenses. */
+    /** Capital the admin has added, minus funds approved to staff, minus expenses,
+     *  minus the customer payout of every bill the admin billed directly. */
     public double availableAdminFund() {
         double capital = adminFunds.findAll().stream().mapToDouble(f -> f.amount).sum();
         double approved = funds.findAll().stream()
                 .filter(fr -> "approved".equals(fr.status)).mapToDouble(fr -> fr.amount).sum();
         double spent = expenses.findAll().stream().mapToDouble(e -> e.amount).sum();
-        return capital - approved - spent;
+        double adminPurchases = txns.findAll().stream()
+                .filter(t -> "approved".equals(t.status) && !t.deleted && adminBilled(t.employeeId))
+                .mapToDouble(t -> t.totals != null ? t.totals.amountPayable : 0).sum();
+        return capital - approved - spent - adminPurchases;
+    }
+
+    /** True if the bill was submitted by an admin (paid out of the admin cash pool, not a staff wallet). */
+    private boolean adminBilled(String employeeId) {
+        return employeeId != null && users.findById(employeeId).map(u -> "admin".equals(u.role)).orElse(false);
     }
 }

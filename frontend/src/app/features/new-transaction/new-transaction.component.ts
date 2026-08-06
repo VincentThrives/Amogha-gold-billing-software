@@ -134,11 +134,19 @@ export class NewTransactionComponent implements OnInit {
 
     const me = this.store.me()!;
 
-    // staff can only send a bill for approval if their wallet balance covers the amount payable
-    // to the customer. (The release amount is paid to the bank separately and does not touch the
-    // billing wallet.) If not, they must get a fund request approved first. Admins skip this check.
-    if (!this.store.isAdmin()) {
-      const needed = tot.amountPayableRounded;
+    // A bill can only be generated if the biller's wallet covers the amount payable to the customer.
+    // (The release amount is paid to the bank separately and does not touch the wallet.)
+    // - staff: their own approved fund balance
+    // - admin: the admin cash pool (available fund) — they must add funds first if it's short
+    const needed = tot.amountPayableRounded;
+    if (this.store.isAdmin()) {
+      const available = this.store.adminFundAvailable();
+      if (needed > available) {
+        this.toast.err(`Insufficient admin funds: ₹${available.toLocaleString('en-IN')} available, this bill needs ₹${needed.toLocaleString('en-IN')}. Add funds in Fund Reports before generating this bill.`);
+        highlightField(document.getElementById('i_gross_' + rows[0].idx));
+        return false;
+      }
+    } else {
       const available = this.store.balanceOf(me.id);
       if (needed > available) {
         this.toast.err(`Insufficient funds: ₹${available.toLocaleString('en-IN')} available, this bill needs ₹${needed.toLocaleString('en-IN')}. Request and get funds approved before sending for approval.`);

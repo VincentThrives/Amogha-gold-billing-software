@@ -13,6 +13,7 @@ describe('NewTransactionComponent', () => {
   let addTxn: jasmine.Spy;
   let meSig: ReturnType<typeof signal<User | null>>;
   let balance = 0;
+  let adminAvail = 0;
 
   function build() {
     meSig = signal<User | null>({ id: 'u-admin', name: 'Amogha Admin', role: 'admin', phone: '9999900001' });
@@ -23,6 +24,7 @@ describe('NewTransactionComponent', () => {
       isAdmin: () => meSig()?.role === 'admin',
       billingConfig: () => ({ defaultMargin: 0, defaultBillingCharges: 100 }),
       balanceOf: (_: string) => balance,
+      adminFundAvailable: () => adminAvail,
       transactions: signal<Txn[]>([]),
       genId: (p: string) => p + '-x',
       genBillNo: () => '1234ABCDEF',
@@ -58,7 +60,7 @@ describe('NewTransactionComponent', () => {
     cmp.margin = 79; cmp.charges = 100;
   }
 
-  beforeEach(() => { balance = 0; build(); });
+  beforeEach(() => { balance = 0; adminAvail = 10_000_000; build(); });
 
   it('starts on gold with one item row pre-filled from the admin rate', () => {
     expect(cmp.metal).toBe('gold');
@@ -132,11 +134,12 @@ describe('NewTransactionComponent', () => {
     expect(toast.err).toHaveBeenCalledWith(jasmine.stringMatching(/Insufficient funds/));
   });
 
-  it('lets an admin bill without any funds (no fund check for admins)', async () => {
-    balance = 0;  // admin has no wallet; should still generate the bill
+  it('blocks an admin bill when the admin fund pool cannot cover the payout', async () => {
+    adminAvail = 200000;  // bill payable is ~₹4.23L → pool too small
     fillValid();
     await cmp.submit();
-    expect(addTxn).toHaveBeenCalled();
+    expect(addTxn).not.toHaveBeenCalled();
+    expect(toast.err).toHaveBeenCalledWith(jasmine.stringMatching(/Insufficient admin funds/));
   });
 
   it('release amount is deducted from the payable and sent with the bill', async () => {

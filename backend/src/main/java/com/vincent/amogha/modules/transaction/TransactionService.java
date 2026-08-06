@@ -16,9 +16,11 @@ public class TransactionService {
     private final TxnRepository txns;
     private final BalanceRepository balances;
     private final UserRepository users;
+    private final com.vincent.amogha.modules.ledger.LedgerService ledger;
 
-    public TransactionService(TxnRepository txns, BalanceRepository balances, UserRepository users) {
-        this.txns = txns; this.balances = balances; this.users = users;
+    public TransactionService(TxnRepository txns, BalanceRepository balances, UserRepository users,
+                              com.vincent.amogha.modules.ledger.LedgerService ledger) {
+        this.txns = txns; this.balances = balances; this.users = users; this.ledger = ledger;
     }
 
     /** True if this bill's disbursement was debited from a staff member's funds (approved + submitter is an employee). */
@@ -86,7 +88,13 @@ public class TransactionService {
         t.employeeName = principal.name();
 
         if (isAdmin) {
-            // admin-created bills are final immediately
+            // admin-created bills are final immediately and paid out of the admin cash pool —
+            // block if the pool can't cover the customer payout.
+            long due = disbursed(t);
+            double available = ledger.availableAdminFund();
+            if (available < due)
+                throw ApiException.badRequest("Insufficient admin funds: ₹" + (long) available + " available, this bill needs ₹" + due
+                        + ". Add funds before generating this bill.");
             t.status = "approved";
             t.approvedBy = principal.userId();
             t.approvedAt = Instant.now().toString();

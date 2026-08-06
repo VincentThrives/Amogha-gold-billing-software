@@ -85,6 +85,12 @@ class ApiIntegrationTest {
     @Test void state_requiresToken() {
         assertEquals(HttpStatus.UNAUTHORIZED, call(HttpMethod.GET, "/api/state", null, null).getStatusCode());
     }
+    @Test void ping_isPublicAndReturnsOk() {
+        ResponseEntity<Map> r = call(HttpMethod.GET, "/api/ping", null, null);   // no token
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertEquals("ok", r.getBody().get("status"));
+        assertEquals("amogha-billing", r.getBody().get("service"));
+    }
     @Test void adminState_hasGstinAndName() {
         Map s = call(HttpMethod.GET, "/api/state", null, admin()).getBody();
         assertEquals("29ABFCA1286P1Z2", ((Map) s.get("company")).get("gstn"));
@@ -97,6 +103,7 @@ class ApiIntegrationTest {
     }
     @Test void employeeState_seesOnlyOwnTransactions() {
         String adminT = admin(), empT = employee();
+        adminFund(adminT, 5000);
         call(HttpMethod.POST, "/api/transactions", bill(5000), adminT);   // admin bill (employeeId u-admin)
         fund(empT, adminT, 10000);
         call(HttpMethod.POST, "/api/transactions", bill(6000), empT);      // employee's own bill (pending)
@@ -139,8 +146,16 @@ class ApiIntegrationTest {
         Map body = Map.of("metal", "gold", "customer", Map.of("name", "X"), "items", List.of(), "totals", Map.of("margin", 0, "billingCharges", 0));
         assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/transactions", body, admin()).getStatusCode());
     }
-    @Test void adminBillsWithoutFunds() {
-        Map r = call(HttpMethod.POST, "/api/transactions", bill(5000), admin()).getBody();
+    @Test void adminBill_blockedWhenPoolCannotCover() {
+        // admin bills are paid from the admin cash pool; with no funds the bill is refused
+        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/transactions", bill(5000), admin());
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        assertTrue(((String) r.getBody().get("error")).contains("Insufficient admin funds"));
+    }
+    @Test void adminBillsWithFunds() {
+        String adminT = admin();
+        adminFund(adminT, 5000);
+        Map r = call(HttpMethod.POST, "/api/transactions", bill(5000), adminT).getBody();
         assertTrue(((String) r.get("billNo")).matches("\\d{4}[0-9A-F]{6}"));
     }
     @Test void employeeSubmit_createsPendingAndDoesNotDebitUntilApproval() {
@@ -160,7 +175,9 @@ class ApiIntegrationTest {
         assertTrue(((String) r.getBody().get("error")).contains("Insufficient funds"));
     }
     @Test void adminSubmit_createsApprovedImmediately() {
-        assertEquals("approved", call(HttpMethod.POST, "/api/transactions", bill(5000), admin()).getBody().get("status"));
+        String adminT = admin();
+        adminFund(adminT, 5000);
+        assertEquals("approved", call(HttpMethod.POST, "/api/transactions", bill(5000), adminT).getBody().get("status"));
     }
     @Test void employeeMarginAndChargesAreForcedToZeroAtSubmit() {
         String adminT = admin(), empT = employee();
@@ -174,6 +191,10 @@ class ApiIntegrationTest {
     }
 
     // ---------- APPROVAL ----------
+    /** Give the admin their own cash pool (needed before admin bills or staff approvals). */
+    private void adminFund(String adminT, int amount) {
+        call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", amount, "method", "Cash"), adminT);
+    }
     private void fund(String empT, String adminT, int amount) {
         // admin must have their own capital before they can approve staff funds
         call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", amount, "note", "seed"), adminT);
@@ -277,6 +298,7 @@ class ApiIntegrationTest {
     }
     @Test void purge_onlyFromRecycleBin() {
         String adminT = admin();
+        adminFund(adminT, 5000);
         Map t = call(HttpMethod.POST, "/api/transactions", bill(5000), adminT).getBody(); // admin bill, approved
         // cannot purge an active bill
         assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.DELETE, "/api/transactions/" + t.get("id"), null, adminT).getStatusCode());
@@ -294,6 +316,7 @@ class ApiIntegrationTest {
     }
     @Test void employeeCannotDeleteBills() {
         String adminT = admin(), empT = employee();
+        adminFund(adminT, 5000);
         Map t = call(HttpMethod.POST, "/api/transactions", bill(5000), adminT).getBody();
         assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/delete", Map.of(), empT).getStatusCode());
     }
@@ -373,6 +396,19 @@ class ApiIntegrationTest {
         assertEquals("Amogha Admin", f.get("addedByName"));   // captured from the principal
         assertNotNull(f.get("date"));
     }
+    @Test void adminBill_reducesAdminAvailable_deleteRestores() {
+        String adminT = admin();
+        call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 100000, "method", "Cash"), adminT);
+        // admin bills gold worth 40000 -> payout comes out of the admin cash pool
+        Map t = call(HttpMethod.POST, "/api/transactions", bill(40000), adminT).getBody();
+        assertEquals("approved", t.get("status"));
+        Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        assertEquals(60000.0, ((Number) s.get("adminFundAvailable")).doubleValue());   // 100000 - 40000
+        // deleting the bill restores the pool
+        call(HttpMethod.POST, "/api/transactions/" + t.get("id") + "/delete", Map.of(), adminT);
+        s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
+        assertEquals(100000.0, ((Number) s.get("adminFundAvailable")).doubleValue());
+    }
     @Test void expenseReducesAvailable() {
         String adminT = admin();
         call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 100000, "note", "seed"), adminT);
@@ -451,6 +487,7 @@ class ApiIntegrationTest {
     // ---------- RESET ----------
     @Test void resetWipesTransactions() {
         String adminT = admin();
+        adminFund(adminT, 5000);
         call(HttpMethod.POST, "/api/transactions", bill(5000), adminT);
         assertTrue(((List) call(HttpMethod.GET, "/api/state", null, adminT).getBody().get("transactions")).size() >= 1);
         call(HttpMethod.POST, "/api/admin/reset", Map.of(), adminT);
