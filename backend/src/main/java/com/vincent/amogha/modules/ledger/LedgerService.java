@@ -63,7 +63,7 @@ public class LedgerService {
         double spent = expenses.findAll().stream().mapToDouble(e -> e.amount).sum();
         double adminPurchases = txns.findAll().stream()
                 .filter(t -> "approved".equals(t.status) && !t.deleted && adminBilled(t.employeeId))
-                .mapToDouble(t -> t.totals != null ? t.totals.amountPayable : 0).sum();
+                .mapToDouble(t -> t.totals != null ? t.totals.amountPayable + Math.round(t.totals.releaseAmount) : 0).sum();
         return capital - approved - spent - adminPurchases;
     }
 

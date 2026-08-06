@@ -134,11 +134,11 @@ export class NewTransactionComponent implements OnInit {
 
     const me = this.store.me()!;
 
-    // A bill can only be generated if the biller's wallet covers the amount payable to the customer.
-    // (The release amount is paid to the bank separately and does not touch the wallet.)
+    // A bill can only be generated if the biller's wallet covers what they hand out:
+    // the amount payable to the customer PLUS the release amount paid to the bank.
     // - staff: their own approved fund balance
     // - admin: the admin cash pool (available fund) — they must add funds first if it's short
-    const needed = tot.amountPayableRounded;
+    const needed = tot.amountPayableRounded + Math.round(release);
     if (this.store.isAdmin()) {
       const available = this.store.adminFundAvailable();
       if (needed > available) {

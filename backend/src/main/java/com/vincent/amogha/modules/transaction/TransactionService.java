@@ -29,18 +29,19 @@ public class TransactionService {
                 && users.findById(t.employeeId).map(u -> "employee".equals(u.role)).orElse(false);
     }
 
-    /** Cash the staff pays out from their wallet = the net amount payable to the customer.
-        (The release amount is paid to the bank separately and does not touch the billing wallet.) */
+    /** Total cash the biller hands out from their wallet = amount payable to the customer
+        + the release amount paid to the bank. Both come out of the biller's wallet. */
     private long disbursed(Txn t) {
-        return t.totals != null ? t.totals.amountPayable : 0;
+        if (t.totals == null) return 0;
+        return t.totals.amountPayable + Math.round(t.totals.releaseAmount);
     }
 
-    /** Admin soft-deletes an approved bill → recycle bin; refunds the staff payout to their wallet. */
+    /** Admin soft-deletes an approved bill → recycle bin; refunds the staff disbursement (payout + release). */
     public Txn softDelete(String id, AmoghaPrincipal principal) {
         Txn t = txns.findById(id).orElseThrow(() -> ApiException.notFound("Transaction not found."));
         if (t.deleted) throw ApiException.badRequest("Bill is already deleted.");
         if (!"approved".equals(t.status)) throw ApiException.badRequest("Only approved bills can be deleted.");
-        if (staffFunded(t)) credit(t.employeeId, disbursed(t));   // refund the customer payout
+        if (staffFunded(t)) credit(t.employeeId, disbursed(t));   // refund payout + release
         t.deleted = true;
         t.deletedAt = Instant.now().toString();
         t.deletedBy = principal.userId();
@@ -128,7 +129,7 @@ public class TransactionService {
         if (t.totals.amountPayable <= 0) throw ApiException.badRequest("Amount payable must be greater than zero.");
         validateRelease(t);
 
-        // debit the submitting staff member's wallet by the amount payable to the customer
+        // debit the submitting staff member's wallet by the total disbursed (payout + release)
         long due = disbursed(t);
         double bal = balanceOf(t.employeeId);
         if (bal < due)

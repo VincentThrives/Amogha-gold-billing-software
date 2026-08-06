@@ -246,7 +246,7 @@ class ApiIntegrationTest {
         if (bank != null) body.put("releaseBank", bank);
         return body;
     }
-    @Test void release_deductsFromPayableAndDebitsPayoutOnly() {
+    @Test void release_deductsPayoutPlusReleaseFromWallet() {
         String adminT = admin(), empT = employee();
         fund(empT, adminT, 600000);
         Map t = call(HttpMethod.POST, "/api/transactions", billWithRelease(300000, "RTGS", "HDFC Bank"), empT).getBody();
@@ -256,9 +256,9 @@ class ApiIntegrationTest {
                 Map.of("margin", 0, "billingCharges", 0, "releaseAmount", 300000, "releaseMethod", "RTGS", "releaseBank", "HDFC Bank"), adminT).getBody();
         assertEquals(200000L, ((Number) ((Map) approved.get("totals")).get("amountPayable")).longValue());
         assertEquals(300000.0, ((Number) ((Map) approved.get("totals")).get("releaseAmount")).doubleValue());
-        // wallet debited by the customer payout only (release is paid to the bank separately): 6L - 2L = 4L
+        // wallet debited by payout + release (both come out of the wallet): 6L - (2L + 3L) = 1L
         Map s = call(HttpMethod.GET, "/api/state", null, empT).getBody();
-        assertEquals(400000.0, ((Number) ((Map) s.get("balances")).get("u-emp1")).doubleValue());
+        assertEquals(100000.0, ((Number) ((Map) s.get("balances")).get("u-emp1")).doubleValue());
     }
     @Test void release_cannotExceedGross() {
         assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/transactions", billWithRelease(600000, "RTGS", "HDFC Bank"), employee()).getStatusCode());
