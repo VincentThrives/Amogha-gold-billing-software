@@ -29,8 +29,9 @@ export class DashboardComponent {
     const start = new Date(); start.setHours(0, 0, 0, 0);
     return this.all().filter(t => new Date(t.date) >= start);
   });
-  sumToday = computed(() => this.todayCount().reduce((s, t) => s + t.totals.amountPayable, 0));
-  sumAll = computed(() => this.all().reduce((s, t) => s + t.totals.amountPayable, 0));
+  // total cash paid out today = customer payable + release amount paid to the bank
+  private paidOut = (t: Txn) => t.totals.amountPayable + (t.totals.releaseAmount || 0);
+  sumToday = computed(() => this.todayCount().reduce((s, t) => s + this.paidOut(t), 0));
   myBalance = computed(() => { const me = this.store.me(); return me ? this.store.balanceOf(me.id) : 0; });
 
   results = computed<Txn[]>(() => {
