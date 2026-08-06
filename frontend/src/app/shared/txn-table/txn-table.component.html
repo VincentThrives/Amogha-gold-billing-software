@@ -14,7 +14,7 @@
             <td>{{ t.customer.phone || '—' }}</td>
             <td><span class="badge" [ngClass]="t.metal">{{ t.metal }}</span></td>
             <td>{{ t.totals.netWeight.toFixed(2) }} g</td>
-            <td><b>{{ inr0(t.totals.amountPayable) }}</b></td>
+            <td><b>{{ paidOut(t) }}</b></td>
             <td><span class="badge" [ngClass]="t.status || 'approved'">{{ t.status || 'approved' }}</span></td>
             <td>{{ date(t.date) }}</td>
             <td class="right">

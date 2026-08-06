@@ -16,4 +16,6 @@ export class TxnTableComponent {
   @Output() delete = new EventEmitter<Txn>();
   inr0 = (n: number) => inr(n, 0);
   date = (iso: string) => billDate(iso);
+  // total paid out for a bill = amount payable to the customer + release paid to the bank
+  paidOut = (t: Txn) => inr(t.totals.amountPayable + (t.totals.releaseAmount || 0), 0);
 }
