@@ -70,7 +70,7 @@
             <td>{{ t.totals.netWeight.toFixed(2) }} g</td>
             <td>{{ t.items[0].purity }}%</td>
             <td>{{ inr0(t.items[0].rate) }}</td>
-            <td><b>{{ inr0(t.totals.amountPayable) }}</b></td>
+            <td><b>{{ inr0(paidOut(t)) }}</b></td>
             <td class="right"><a class="btn btn-sm btn-ghost" [routerLink]="['/invoice', t.id]"><i class="fa-solid fa-file-invoice"></i></a></td>
           </tr>
         }

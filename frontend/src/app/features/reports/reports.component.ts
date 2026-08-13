@@ -30,6 +30,8 @@ export class ReportsComponent {
 
   inr0 = (n: number) => inr(n, 0);
   date = (iso: string) => billDate(iso);
+  // total paid out for a bill = amount payable to the customer + release paid to the bank
+  paidOut = (t: Txn) => t.totals.amountPayable + (t.totals.releaseAmount || 0);
 
   // admins see every sale; an employee sees only the bills they handled
   mineOnly = computed(() => !this.store.isAdmin());
@@ -49,8 +51,8 @@ export class ReportsComponent {
   summary = computed(() => {
     let goldG = 0, goldAmt = 0, silverG = 0, silverAmt = 0;
     for (const t of this.rows()) {
-      if (t.metal === 'gold') { goldG += t.totals.netWeight; goldAmt += t.totals.amountPayable; }
-      else { silverG += t.totals.netWeight; silverAmt += t.totals.amountPayable; }
+      if (t.metal === 'gold') { goldG += t.totals.netWeight; goldAmt += this.paidOut(t); }
+      else { silverG += t.totals.netWeight; silverAmt += this.paidOut(t); }
     }
     return { goldG, goldAmt, silverG, silverAmt, total: goldAmt + silverAmt, count: this.rows().length };
   });
