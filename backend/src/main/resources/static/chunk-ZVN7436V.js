@@ -1,0 +1,1 @@
+var n=["Bangle","Kada","Bracelet","Rings","Stud Earrings","Necklace","Necklace with stones","Gold Biscuit","Gold Bar","Chain","Chain with dollar","Mixed ornaments","Mixed ornaments with stones","coin 91.6","coin 995","coin 999","biscuit 995","biscuit 999"].sort((i,e)=>i.localeCompare(e,void 0,{sensitivity:"base"}));export{n as a};

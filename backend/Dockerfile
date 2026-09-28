@@ -1,14 +1,13 @@
 # Build the Spring Boot jar. The compiled Angular app is committed under
-# backend/src/main/resources/static/, so the jar serves the UI from
-# classpath:/static/ — no separate frontend build step is needed here.
+# src/main/resources/static/, so the jar serves the UI from classpath:/static/.
 #
-# Build context = repository root (this directory). In Render: Root Directory
-# blank (repo root), Dockerfile Path = Dockerfile.
+# Build context = the backend/ directory (this file's directory). In Render:
+# Root Directory = backend, Dockerfile Path = ./Dockerfile.
 
 # ---- Build stage ----
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
-COPY backend/ ./
+COPY . .
 RUN mvn -B clean package -DskipTests
 
 # ---- Run stage ----

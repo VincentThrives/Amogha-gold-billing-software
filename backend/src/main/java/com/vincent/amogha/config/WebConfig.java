@@ -29,8 +29,10 @@ public class WebConfig implements WebMvcConfigurer {
         // Always serve the classpath static dir (where the jar bundles the app in production);
         // additionally serve a filesystem dir for local dev (ng build output).
         if (staticDir != null && !staticDir.isBlank() && !staticDir.startsWith("classpath:")) {
+            // Local dev: serve the live ng-build output from the filesystem first, then
+            // fall back to the copy baked into the jar (classpath:/static/).
             Path dir = Paths.get(staticDir).toAbsolutePath().normalize();
-            registry.addResourceHandler("/**").addResourceLocations("classpath:/static/", dir.toUri().toString());
+            registry.addResourceHandler("/**").addResourceLocations(dir.toUri().toString(), "classpath:/static/");
         } else {
             registry.addResourceHandler("/**").addResourceLocations("classpath:/static/");
         }
