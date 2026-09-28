@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { TxnTableComponent } from '../../shared/txn-table/txn-table.component';
 import { Txn } from '../../core/models';
 
@@ -19,6 +20,7 @@ type SearchType = 'all' | 'name' | 'phone' | 'bill';
 export class TransactionsComponent {
   store = inject(StoreService);
   private toast = inject(ToastService);
+  private dlg = inject(DialogService);
 
   searchType = signal<SearchType>('all');
   term = signal('');
@@ -49,7 +51,7 @@ export class TransactionsComponent {
   clear() { this.term.set(''); this.searchType.set('all'); }
 
   async onDelete(t: Txn) {
-    if (!confirm(`Move bill ${t.billNo} (${t.customer.name}) to Deleted Invoices? The staff payout will be refunded.`)) return;
+    if (!(await this.dlg.confirm({ title: 'Delete bill', message: `Move bill ${t.billNo} (${t.customer.name}) to Deleted Invoices? The staff payout will be refunded.`, okText: 'Delete', danger: true }))) return;
     try {
       await this.store.deleteTxn(t.id);
       this.toast.show(`Bill ${t.billNo} moved to Deleted Invoices.`);

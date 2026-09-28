@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { RegisterCustomerComponent } from './register-customer.component';
 import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { RegisteredCustomer } from '../../core/models';
 
 function customer(id: string, name: string, phone: string): RegisteredCustomer {
@@ -15,6 +16,7 @@ describe('RegisterCustomerComponent', () => {
   let toast: jasmine.SpyObj<ToastService>;
   let register: jasmine.Spy;
   let router: Router;
+  let dlg: jasmine.SpyObj<DialogService>;
   const customers = signal<RegisteredCustomer[]>([]);
 
   function fillValidKyc(phone = '9111100000') {   // default = a phone NOT already registered
@@ -28,11 +30,13 @@ describe('RegisterCustomerComponent', () => {
     register = jasmine.createSpy('registerCustomer').and.resolveTo({ customer: customer('c1', 'Ravi', '9800000000'), existed: false });
     const store = { customers, registerCustomer: register };
     toast = jasmine.createSpyObj('ToastService', ['err', 'ok', 'show']);
+    dlg = jasmine.createSpyObj('DialogService', ['confirm', 'prompt']);
     TestBed.configureTestingModule({
       imports: [RegisterCustomerComponent],
       providers: [
         { provide: StoreService, useValue: store },
         { provide: ToastService, useValue: toast },
+        { provide: DialogService, useValue: dlg },
         provideRouter([]),
       ],
     });
@@ -55,16 +59,16 @@ describe('RegisterCustomerComponent', () => {
     expect(toast.ok).toHaveBeenCalledWith(jasmine.stringMatching(/Customer registered/));
   });
 
-  it('pops up "already exists with this number" and cancelling aborts the save', async () => {
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+  it('pops up "already exists" and cancelling aborts the save', async () => {
+    dlg.confirm.and.resolveTo(false);
     fillValidKyc('9800000000');  // already registered to Ravi (c1)
     await cmp.save();
-    expect(confirmSpy).toHaveBeenCalledWith(jasmine.stringMatching(/already exists with this number/));
+    expect(dlg.confirm).toHaveBeenCalledWith(jasmine.objectContaining({ message: jasmine.stringMatching(/already exists/) }));
     expect(register).not.toHaveBeenCalled();
   });
 
   it('confirming the popup updates the existing customer', async () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    dlg.confirm.and.resolveTo(true);
     register.and.resolveTo({ customer: customer('c1', 'Ravi Kumar', '9800000000'), existed: true });
     fillValidKyc('9800000000');
     await cmp.save();

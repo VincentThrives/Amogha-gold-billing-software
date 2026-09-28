@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Company, Txn } from '../../core/models';
 import { billDate, inr, inWords } from '../../core/calc';
 
@@ -18,6 +19,7 @@ export class InvoiceComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private toast = inject(ToastService);
+  private dlg = inject(DialogService);
 
   txn?: Txn;
   company!: Company;
@@ -43,7 +45,7 @@ export class InvoiceComponent implements OnInit {
   async deleteBill() {
     const t = this.txn;
     if (!t) return;
-    if (!confirm(`Move bill ${t.billNo} to Deleted Invoices? The staff payout will be refunded.`)) return;
+    if (!(await this.dlg.confirm({ title: 'Delete bill', message: `Move bill ${t.billNo} to Deleted Invoices? The staff payout will be refunded.`, okText: 'Delete', danger: true }))) return;
     this.busy.set(true);
     try {
       await this.store.deleteTxn(t.id);

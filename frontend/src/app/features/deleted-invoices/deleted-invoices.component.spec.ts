@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { DeletedInvoicesComponent } from './deleted-invoices.component';
 import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Txn } from '../../core/models';
 
 const DEL = {
@@ -19,15 +20,18 @@ describe('DeletedInvoicesComponent', () => {
   let restoreTxn: jasmine.Spy;
   let purgeTxn: jasmine.Spy;
   let toast: jasmine.SpyObj<ToastService>;
+  let dlgConfirm = true;
 
   beforeEach(() => {
+    dlgConfirm = true;
     restoreTxn = jasmine.createSpy('restoreTxn').and.resolveTo(undefined);
     purgeTxn = jasmine.createSpy('purgeTxn').and.resolveTo(undefined);
     const store = { deletedTransactions: signal<Txn[]>([DEL]), restoreTxn, purgeTxn };
     toast = jasmine.createSpyObj('ToastService', ['ok', 'err', 'show']);
+    const dlg = { confirm: () => Promise.resolve(dlgConfirm), prompt: () => Promise.resolve(null) };
     TestBed.configureTestingModule({
       imports: [DeletedInvoicesComponent],
-      providers: [{ provide: StoreService, useValue: store }, { provide: ToastService, useValue: toast }, provideRouter([])],
+      providers: [{ provide: StoreService, useValue: store }, { provide: ToastService, useValue: toast }, { provide: DialogService, useValue: dlg }, provideRouter([])],
     });
     cmp = TestBed.createComponent(DeletedInvoicesComponent).componentInstance;
   });
@@ -39,13 +43,13 @@ describe('DeletedInvoicesComponent', () => {
   });
 
   it('delete-forever asks to confirm and purges when confirmed', async () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    dlgConfirm = true;
     await cmp.purge(DEL);
     expect(purgeTxn).toHaveBeenCalledWith('txn-1');
   });
 
   it('delete-forever does nothing when cancelled', async () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    dlgConfirm = false;
     await cmp.purge(DEL);
     expect(purgeTxn).not.toHaveBeenCalled();
   });

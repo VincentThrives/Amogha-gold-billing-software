@@ -1,23 +1,47 @@
 <div class="page-head">
-  <div><h2>Employees</h2><p>Add or remove counter staff</p></div>
+  <div><h2>Users</h2><p>Create admins &amp; staff, set and reset their passwords</p></div>
 </div>
 
-<div class="card" style="max-width:640px">
-  <h3>Staff</h3>
+<div class="card">
+  <h3>All users</h3>
   <div class="table-wrap"><table>
-    <thead><tr><th>Name</th><th>Phone</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Phone (username)</th><th>Role</th><th></th></tr></thead>
     <tbody>
-      @for (e of employees(); track e.id) {
-        <tr><td>{{ e.name }}</td><td>{{ e.phone }}</td>
-          <td class="right"><button class="btn btn-sm btn-err" (click)="removeEmployee(e.id)">Remove</button></td></tr>
+      @for (u of users(); track u.id) {
+        <tr>
+          <td>{{ u.name }}</td>
+          <td>{{ u.phone }}</td>
+          <td><span class="badge" [ngClass]="u.role === 'admin' ? 'gold' : 'silver'">{{ u.role }}</span></td>
+          <td class="right">
+            <button class="btn btn-sm btn-ghost" (click)="changePhone(u)"><i class="fa-solid fa-mobile-screen"></i> Change number</button>
+            <button class="btn btn-sm btn-ghost" (click)="resetPassword(u)"><i class="fa-solid fa-key"></i> Reset password</button>
+            @if (u.id !== me()?.id) {
+              <button class="btn btn-sm btn-err" (click)="remove(u.id)">Remove</button>
+            }
+          </td>
+        </tr>
       } @empty {
-        <tr><td colspan="3" class="muted center">No employees yet.</td></tr>
+        <tr><td colspan="4" class="muted center">No users yet.</td></tr>
       }
     </tbody>
   </table></div>
-  <div class="row" style="margin-top:12px">
-    <input id="emp_name" placeholder="Name" style="flex:1" [(ngModel)]="empName">
-    <input id="emp_phone" placeholder="10-digit phone" inputmode="numeric" maxlength="10" style="flex:1" [ngModel]="empPhone" (ngModelChange)="onEmpPhone($event)">
-    <button class="btn btn-purple" (click)="addEmployee()">Add Employee</button>
+</div>
+
+<div class="card" style="max-width:640px">
+  <h3><i class="fa-solid fa-user-plus"></i> Add user</h3>
+  <div class="grid grid-2" style="align-items:end">
+    <div class="field"><label>Name</label><input id="u_name" placeholder="Full name" [(ngModel)]="newName"></div>
+    <div class="field"><label>Phone (login username)</label><input id="u_phone" placeholder="10-digit phone" inputmode="numeric" maxlength="10" [ngModel]="newPhone" (ngModelChange)="onPhone($event)"></div>
   </div>
+  <div class="grid grid-2" style="align-items:end;margin-top:8px">
+    <div class="field"><label>Role</label>
+      <select [(ngModel)]="newRole">
+        <option value="employee">Staff / Employee</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="field"><label>Password</label><input id="u_password" type="text" placeholder="e.g. name&#64;birthyear" [(ngModel)]="newPassword"></div>
+  </div>
+  <button class="btn btn-purple" style="margin-top:12px" [disabled]="busy()" (click)="createUser()"><i class="fa-solid fa-plus"></i> Add user</button>
+  <p class="hintline"><i class="fa-solid fa-circle-info"></i> The user logs in with their phone number and this password. You can reset it anytime.</p>
 </div>

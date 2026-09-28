@@ -1,0 +1,13 @@
+:host { display: block; }
+
+.tabs { display: flex; gap: 6px; border-bottom: 2px solid var(--line, #e5e7eb); margin-bottom: 18px; flex-wrap: wrap; }
+.tab {
+  border: 0; background: transparent; padding: 10px 16px; cursor: pointer; font: inherit; font-weight: 600;
+  font-size: 14px; color: var(--muted, #6b7280); border-bottom: 3px solid transparent; margin-bottom: -2px;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.tab.on { color: var(--purple, #4a1d5f); border-bottom-color: var(--gold, #c9a227); }
+.tab-badge {
+  background: #dc2626; color: #fff; border-radius: 10px; font-size: 11px; font-weight: 700;
+  min-width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px;
+}

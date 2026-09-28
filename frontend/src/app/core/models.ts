@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'employee';
+export type Role = 'superadmin' | 'admin' | 'employee';
 export type Metal = 'gold' | 'silver';
 export type FundStatus = 'pending' | 'approved' | 'rejected';
 export type TxnStatus = 'pending' | 'approved' | 'rejected';
@@ -140,9 +140,16 @@ export interface AdminFund {
 export interface Expense {
   id: string;
   amount: number;
+  category: string;
   reason: string;
   date: string;
   createdBy: string;
+  createdByName: string;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
 }
 
 export interface AppState {
@@ -158,5 +165,7 @@ export interface AppState {
   deletedTransactions: Txn[];
   adminFunds: AdminFund[];
   expenses: Expense[];
+  expenseCategories: ExpenseCategory[];
   adminFundAvailable: number;
+  features: Record<string, boolean>;
 }

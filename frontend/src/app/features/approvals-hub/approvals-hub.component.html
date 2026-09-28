@@ -1,0 +1,19 @@
+<div class="page-head">
+  <div><h2>Approvals</h2><p>{{ store.isAdmin() ? 'Approve staff bills and fund requests' : 'Request billing funds from the admin' }}</p></div>
+</div>
+
+@if (store.isAdmin()) {
+  <div class="tabs">
+    <button type="button" class="tab" [class.on]="tab() === 'bill'" (click)="tab.set('bill')">
+      <i class="fa-solid fa-file-circle-check"></i> Bill Approvals
+      @if (store.pendingTxns().length) { <span class="tab-badge">{{ store.pendingTxns().length }}</span> }
+    </button>
+    <button type="button" class="tab" [class.on]="tab() === 'fund'" (click)="tab.set('fund')">
+      <i class="fa-solid fa-wallet"></i> Fund Approvals
+      @if (store.pendingFunds().length) { <span class="tab-badge">{{ store.pendingFunds().length }}</span> }
+    </button>
+  </div>
+}
+
+@if (store.isAdmin() && tab() === 'bill') { <app-approvals></app-approvals> }
+@if (tab() === 'fund') { <app-funds></app-funds> }

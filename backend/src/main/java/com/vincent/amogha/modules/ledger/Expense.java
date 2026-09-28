@@ -8,7 +8,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Expense {
     @Id public String id;
     public double amount;
-    public String reason;      // why the expense was made (required)
-    public String date;        // ISO instant
-    public String createdBy;   // admin userId
+    public String category;     // expense category / keyword (required, from the managed list)
+    public String reason;       // optional note
+    public String date;         // ISO instant
+    public String createdBy;    // admin userId
+    public String createdByName;
 }

@@ -15,7 +15,8 @@ public class LedgerController {
     }
 
     public record FundBody(double amount, String method, String note) {}
-    public record ExpenseBody(double amount, String reason) {}
+    public record ExpenseBody(double amount, String category, String reason) {}
+    public record CategoryBody(String name) {}
 
     @PostMapping("/admin-funds")
     public AdminFund addFund(@RequestBody FundBody body, @AuthenticationPrincipal AmoghaPrincipal principal) {
@@ -24,6 +25,17 @@ public class LedgerController {
 
     @PostMapping("/expenses")
     public Expense addExpense(@RequestBody ExpenseBody body, @AuthenticationPrincipal AmoghaPrincipal principal) {
-        return service.addExpense(body.amount(), body.reason(), principal);
+        return service.addExpense(body.amount(), body.category(), body.reason(), principal);
+    }
+
+    @PostMapping("/expense-categories")
+    public ExpenseCategory addCategory(@RequestBody CategoryBody body, @AuthenticationPrincipal AmoghaPrincipal principal) {
+        return service.addCategory(body.name(), principal);
+    }
+
+    @DeleteMapping("/expense-categories/{id}")
+    public java.util.Map<String, Boolean> removeCategory(@PathVariable String id, @AuthenticationPrincipal AmoghaPrincipal principal) {
+        service.removeCategory(id, principal);
+        return java.util.Map.of("ok", true);
     }
 }

@@ -32,13 +32,13 @@ class ApiIntegrationTest {
     }
 
     @SuppressWarnings("unchecked")
-    private String login(String phone, String role) {
-        Map otp = call(HttpMethod.POST, "/api/auth/request-otp", Map.of("phone", phone, "role", role), null).getBody();
-        Map verify = call(HttpMethod.POST, "/api/auth/verify-otp", Map.of("phone", phone, "otp", otp.get("otp")), null).getBody();
-        return (String) verify.get("token");
+    private String login(String phone, String password) {
+        Map r = call(HttpMethod.POST, "/api/auth/login", Map.of("phone", phone, "password", password), null).getBody();
+        return (String) r.get("token");
     }
-    private String admin() { return login("9999900001", "admin"); }
-    private String employee() { return login("9999900002", "employee"); }
+    private String admin() { return login("9999900001", "admin@2024"); }
+    private String employee() { return login("9999900002", "staff@2024"); }
+    private String superAdmin() { return login("vincentthrives@gmail.com", "Vincent@1127"); }
 
     private Map bill(long payable) {
         return Map.of("metal", "gold",
@@ -50,35 +50,121 @@ class ApiIntegrationTest {
     @BeforeEach
     void reset() { call(HttpMethod.POST, "/api/admin/reset", Map.of(), admin()); }
 
-    // ---------- AUTH ----------
-    @Test void requestOtp_rejectsBadPhone() {
-        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/auth/request-otp", Map.of("phone", "123", "role", "admin"), null).getStatusCode());
-    }
-    @Test void requestOtp_unknownAccount404() {
-        assertEquals(HttpStatus.NOT_FOUND, call(HttpMethod.POST, "/api/auth/request-otp", Map.of("phone", "9000000000", "role", "admin"), null).getStatusCode());
-    }
-    @Test void requestOtp_validReturnsOtpAndName() {
-        Map b = call(HttpMethod.POST, "/api/auth/request-otp", Map.of("phone", "9999900001", "role", "admin"), null).getBody();
-        assertTrue(((String) b.get("otp")).matches("\\d{6}"));
-        assertEquals("Amogha Admin", b.get("name"));
-    }
-    @Test void roleMustMatch() {
-        assertEquals(HttpStatus.NOT_FOUND, call(HttpMethod.POST, "/api/auth/request-otp", Map.of("phone", "9999900001", "role", "employee"), null).getStatusCode());
-    }
-    @Test void verifyOtp_wrongOtpRejected() {
-        call(HttpMethod.POST, "/api/auth/request-otp", Map.of("phone", "9999900001", "role", "admin"), null);
-        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/auth/verify-otp", Map.of("phone", "9999900001", "otp", "000000"), null).getStatusCode());
-    }
-    @Test void verifyOtp_validIssuesToken() {
-        Map otp = call(HttpMethod.POST, "/api/auth/request-otp", Map.of("phone", "9999900001", "role", "admin"), null).getBody();
-        Map v = call(HttpMethod.POST, "/api/auth/verify-otp", Map.of("phone", "9999900001", "otp", otp.get("otp")), null).getBody();
+    // ---------- AUTH (phone + password) ----------
+    @Test void login_validIssuesTokenWithRole() {
+        Map v = call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9999900001", "password", "admin@2024"), null).getBody();
         assertNotNull(v.get("token"));
         assertEquals("admin", ((Map) v.get("user")).get("role"));
     }
-    @Test void otpIsSingleUse() {
-        Map otp = call(HttpMethod.POST, "/api/auth/request-otp", Map.of("phone", "9999900001", "role", "admin"), null).getBody();
-        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/auth/verify-otp", Map.of("phone", "9999900001", "otp", otp.get("otp")), null).getStatusCode());
-        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/auth/verify-otp", Map.of("phone", "9999900001", "otp", otp.get("otp")), null).getStatusCode());
+    @Test void login_staffGetsEmployeeRole() {
+        Map v = call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9999900002", "password", "staff@2024"), null).getBody();
+        assertEquals("employee", ((Map) v.get("user")).get("role"));
+    }
+    @Test void login_wrongPasswordRejected() {
+        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9999900001", "password", "nope"), null);
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        assertTrue(((String) r.getBody().get("error")).contains("Incorrect"));
+    }
+    @Test void login_unknownPhoneRejected() {
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9000000000", "password", "x"), null).getStatusCode());
+    }
+    @Test void changePassword_selfService() {
+        String empT = employee();
+        // wrong current password is rejected
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/auth/change-password",
+                Map.of("currentPassword", "wrong", "newPassword", "newpass1"), empT).getStatusCode());
+        // change with correct current password
+        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/auth/change-password",
+                Map.of("currentPassword", "staff@2024", "newPassword", "newpass1"), empT).getStatusCode());
+        // old password no longer works, new one does
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9999900002", "password", "staff@2024"), null).getStatusCode());
+        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9999900002", "password", "newpass1"), null).getStatusCode());
+    }
+    @Test void adminCreatesAdminAndStaffWithPassword() {
+        String adminT = admin();
+        // create another admin
+        Map a = call(HttpMethod.POST, "/api/users", Map.of("name", "Second Admin", "phone", "9111100001", "role", "admin", "password", "admin2pass"), adminT).getBody();
+        assertEquals("admin", a.get("role"));
+        assertEquals("admin", ((Map) call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9111100001", "password", "admin2pass"), null).getBody().get("user")).get("role"));
+        // create a staff member
+        Map s = call(HttpMethod.POST, "/api/users", Map.of("name", "New Staff", "phone", "9111100002", "role", "employee", "password", "staffpass"), adminT).getBody();
+        assertEquals("employee", s.get("role"));
+        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9111100002", "password", "staffpass"), null).getStatusCode());
+    }
+    @Test void createUser_shortPasswordRejected() {
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/users",
+                Map.of("name", "X", "phone", "9111100003", "role", "employee", "password", "ab"), admin()).getStatusCode());
+    }
+    @Test void adminResetsUserPassword() {
+        String adminT = admin();
+        Map s = call(HttpMethod.POST, "/api/users", Map.of("name", "Reset Me", "phone", "9111100004", "role", "employee", "password", "orig1234"), adminT).getBody();
+        call(HttpMethod.POST, "/api/users/" + s.get("id") + "/reset-password", Map.of("password", "reset999"), adminT);
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9111100004", "password", "orig1234"), null).getStatusCode());
+        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9111100004", "password", "reset999"), null).getStatusCode());
+    }
+    @Test void employeeCannotCreateOrResetUsers() {
+        String empT = employee();
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/users", Map.of("name", "X", "phone", "9111100005", "role", "admin", "password", "abcd"), empT).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/users/u-admin/reset-password", Map.of("password", "abcd"), empT).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/users/u-admin/phone", Map.of("phone", "9111100006"), empT).getStatusCode());
+    }
+    @Test void adminChangesUserMobileNumber() {
+        String adminT = admin();
+        Map s = call(HttpMethod.POST, "/api/users", Map.of("name", "Move Me", "phone", "9111100007", "role", "employee", "password", "movepass"), adminT).getBody();
+        // change the number
+        Map updated = call(HttpMethod.POST, "/api/users/" + s.get("id") + "/phone", Map.of("phone", "9222200007"), adminT).getBody();
+        assertEquals("9222200007", updated.get("phone"));
+        // old number can no longer log in, new number can (same password, same account id)
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9111100007", "password", "movepass"), null).getStatusCode());
+        Map v = call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9222200007", "password", "movepass"), null).getBody();
+        assertEquals(s.get("id"), ((Map) v.get("user")).get("id"));
+    }
+    @Test void changePhone_rejectsDuplicateAndInvalid() {
+        String adminT = admin();
+        // taking the admin's own number is rejected
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/users/u-emp1/phone", Map.of("phone", "9999900001"), adminT).getStatusCode());
+        // non-10-digit rejected
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/users/u-emp1/phone", Map.of("phone", "123"), adminT).getStatusCode());
+    }
+
+    // ---------- SUPER ADMIN ----------
+    @Test void superAdmin_loginByEmail() {
+        Map v = call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "vincentthrives@gmail.com", "password", "Vincent@1127"), null).getBody();
+        assertNotNull(v.get("token"));
+        assertEquals("superadmin", ((Map) v.get("user")).get("role"));
+    }
+    @Test void state_includesFeatureFlagsDefaultOn() {
+        Map features = (Map) call(HttpMethod.GET, "/api/state", null, admin()).getBody().get("features");
+        assertNotNull(features);
+        assertEquals(Boolean.TRUE, features.get("reports"));
+    }
+    @Test void superAdmin_togglesFeatureAndAdminSeesIt() {
+        String su = superAdmin();
+        assertEquals(HttpStatus.OK, call(HttpMethod.PUT, "/api/features", Map.of("expense", false), su).getStatusCode());
+        Map features = (Map) call(HttpMethod.GET, "/api/state", null, admin()).getBody().get("features");
+        assertEquals(Boolean.FALSE, features.get("expense"));
+    }
+    @Test void normalAdmin_cannotToggleFeatures() {
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.PUT, "/api/features", Map.of("expense", false), admin()).getStatusCode());
+    }
+    @Test void normalAdmin_doesNotSeeSuperAdminInUserList() {
+        List us = (List) call(HttpMethod.GET, "/api/state", null, admin()).getBody().get("users");
+        assertTrue(us.stream().noneMatch(u -> "superadmin".equals(((Map) u).get("role"))));
+    }
+    @Test void superAdmin_seesSuperAdminInUserList() {
+        List us = (List) call(HttpMethod.GET, "/api/state", null, superAdmin()).getBody().get("users");
+        assertTrue(us.stream().anyMatch(u -> "superadmin".equals(((Map) u).get("role"))));
+    }
+    @Test void normalAdmin_cannotResetSuperAdmin() {
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/users/u-super/reset-password", Map.of("password", "hacked12"), admin()).getStatusCode());
+    }
+    @Test void superAdmin_canResetAnAdminPassword() {
+        String su = superAdmin();
+        // super admin creates an admin, then resets that admin's password
+        Map a = call(HttpMethod.POST, "/api/users", Map.of("name", "Other Admin", "phone", "9111100020", "role", "admin", "password", "orig1234"), su).getBody();
+        call(HttpMethod.POST, "/api/users/" + a.get("id") + "/reset-password", Map.of("password", "reset0001"), su);
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9111100020", "password", "orig1234"), null).getStatusCode());
+        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/auth/login", Map.of("phone", "9111100020", "password", "reset0001"), null).getStatusCode());
     }
 
     // ---------- STATE / RBAC ----------
@@ -130,8 +216,8 @@ class ApiIntegrationTest {
         assertEquals("29XXXXX0000X1Z9", ((Map) s.get("company")).get("gstn"));
     }
     @Test void adminAddsEmployee_duplicateRejected() {
-        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/users", Map.of("name", "New", "phone", "9111122223"), admin()).getStatusCode());
-        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/users", Map.of("name", "Dup", "phone", "9111122223"), admin()).getStatusCode());
+        assertEquals(HttpStatus.OK, call(HttpMethod.POST, "/api/users", Map.of("name", "New", "phone", "9111122223", "role", "employee", "password", "pass1234"), admin()).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, call(HttpMethod.POST, "/api/users", Map.of("name", "Dup", "phone", "9111122223", "role", "employee", "password", "pass1234"), admin()).getStatusCode());
     }
     @Test void employeeCannotAddUsers() {
         assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/users", Map.of("name", "X", "phone", "9111122224"), employee()).getStatusCode());
@@ -412,20 +498,48 @@ class ApiIntegrationTest {
     @Test void expenseReducesAvailable() {
         String adminT = admin();
         call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 100000, "note", "seed"), adminT);
-        call(HttpMethod.POST, "/api/expenses", Map.of("amount", 2500, "reason", "shop rent"), adminT);
+        call(HttpMethod.POST, "/api/expenses", Map.of("amount", 2500, "category", "Rent", "reason", "shop rent"), adminT);
         Map s = call(HttpMethod.GET, "/api/state", null, adminT).getBody();
         assertEquals(97500.0, ((Number) s.get("adminFundAvailable")).doubleValue()); // 100000 - 2500
-        assertEquals(1, ((List) s.get("expenses")).size());
+        Map exp = (Map) ((List) s.get("expenses")).get(0);
+        assertEquals("Rent", exp.get("category"));
+        assertEquals("Amogha Admin", exp.get("createdByName"));
     }
-    @Test void expenseRequiresReason() {
+    @Test void expenseRequiresCategory() {
         ResponseEntity<Map> r = call(HttpMethod.POST, "/api/expenses", Map.of("amount", 100), admin());
         assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
-        assertTrue(((String) r.getBody().get("error")).contains("reason"));
+        assertTrue(((String) r.getBody().get("error")).toLowerCase().contains("category"));
+    }
+    @Test void expenseRejectsUnknownCategory() {
+        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/expenses", Map.of("amount", 100, "category", "Bogus"), admin());
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        assertTrue(((String) r.getBody().get("error")).contains("Unknown expense category"));
+    }
+    @Test void state_seedsDefaultExpenseCategories() {
+        List cats = (List) call(HttpMethod.GET, "/api/state", null, admin()).getBody().get("expenseCategories");
+        assertTrue(cats.size() >= 5);
+        assertTrue(cats.stream().anyMatch(c -> "Rent".equals(((Map) c).get("name"))));
+    }
+    @Test void adminAddsAndRemovesCategory() {
+        String adminT = admin();
+        Map cat = call(HttpMethod.POST, "/api/expense-categories", Map.of("name", "Travel"), adminT).getBody();
+        assertEquals("Travel", cat.get("name"));
+        List cats = (List) call(HttpMethod.GET, "/api/state", null, adminT).getBody().get("expenseCategories");
+        assertTrue(cats.stream().anyMatch(c -> "Travel".equals(((Map) c).get("name"))));
+        call(HttpMethod.DELETE, "/api/expense-categories/" + cat.get("id"), null, adminT);
+        List after = (List) call(HttpMethod.GET, "/api/state", null, adminT).getBody().get("expenseCategories");
+        assertTrue(after.stream().noneMatch(c -> "Travel".equals(((Map) c).get("name"))));
+    }
+    @Test void addCategory_duplicateRejected() {
+        ResponseEntity<Map> r = call(HttpMethod.POST, "/api/expense-categories", Map.of("name", "rent"), admin()); // case-insensitive
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        assertTrue(((String) r.getBody().get("error")).contains("already exists"));
     }
     @Test void employeeCannotAddFundOrExpense() {
         String empT = employee();
         assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 1000, "note", "x"), empT).getStatusCode());
-        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/expenses", Map.of("amount", 100, "reason", "x"), empT).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/expenses", Map.of("amount", 100, "category", "Rent"), empT).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, call(HttpMethod.POST, "/api/expense-categories", Map.of("name", "X"), empT).getStatusCode());
     }
     @Test void approvingFund_blockedWhenAdminCapitalShort() {
         String adminT = admin(), empT = employee();
@@ -447,10 +561,11 @@ class ApiIntegrationTest {
     @Test void employeeStateHidesAdminLedger() {
         String adminT = admin(), empT = employee();
         call(HttpMethod.POST, "/api/admin-funds", Map.of("amount", 5000, "note", "seed"), adminT);
-        call(HttpMethod.POST, "/api/expenses", Map.of("amount", 100, "reason", "x"), adminT);
+        call(HttpMethod.POST, "/api/expenses", Map.of("amount", 100, "category", "Rent"), adminT);
         Map s = call(HttpMethod.GET, "/api/state", null, empT).getBody();
         assertTrue(((List) s.get("adminFunds")).isEmpty());
         assertTrue(((List) s.get("expenses")).isEmpty());
+        assertTrue(((List) s.get("expenseCategories")).isEmpty());
         assertEquals(0.0, ((Number) s.get("adminFundAvailable")).doubleValue());
     }
 

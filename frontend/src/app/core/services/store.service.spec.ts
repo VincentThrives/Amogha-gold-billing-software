@@ -21,7 +21,9 @@ const STATE: AppState = {
   deletedTransactions: [],
   adminFunds: [],
   expenses: [],
+  expenseCategories: [],
   adminFundAvailable: 0,
+  features: {},
 };
 
 describe('StoreService', () => {

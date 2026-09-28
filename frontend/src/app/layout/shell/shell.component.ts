@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { AuthService } from '../../core/services/auth.service';
+import { DialogHostComponent } from '../../shared/dialog-host/dialog-host.component';
 import { inr } from '../../core/calc';
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, DialogHostComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
@@ -21,11 +22,11 @@ export class ShellComponent implements OnInit, OnDestroy {
   private poll: any = null;
 
   nav = [
-    { path: '/dashboard', icon: 'fa-gauge-high', label: 'Dashboard' },
-    { path: '/register', icon: 'fa-user-plus', label: 'Register Customer' },
-    { path: '/new', icon: 'fa-plus', label: 'New Transaction' },
-    { path: '/transactions', icon: 'fa-list', label: 'Transaction List' },
-    { path: '/rate', icon: 'fa-coins', label: 'Gold / Silver Rate' },
+    { path: '/dashboard', icon: 'fa-gauge-high', label: 'Dashboard', feature: '' },
+    { path: '/register', icon: 'fa-user-plus', label: 'Register Customer', feature: 'register' },
+    { path: '/new', icon: 'fa-plus', label: 'New Transaction', feature: 'new' },
+    { path: '/transactions', icon: 'fa-list', label: 'Transaction List', feature: 'transactions' },
+    { path: '/rate', icon: 'fa-coins', label: 'Gold / Silver Rate', feature: 'rate' },
   ];
 
   inr0 = (n: number) => inr(n, 0);

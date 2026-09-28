@@ -6,41 +6,61 @@
     </div>
     <nav class="nav">
       @for (item of nav; track item.path) {
-        <a [routerLink]="item.path" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
-          <i class="fa-solid" [ngClass]="item.icon"></i> {{ item.label }}
-        </a>
+        @if (!item.feature || store.featureOn(item.feature)) {
+          <a [routerLink]="item.path" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+            <i class="fa-solid" [ngClass]="item.icon"></i> {{ item.label }}
+          </a>
+        }
       }
-      <a routerLink="/funds" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
-        <i class="fa-solid fa-wallet"></i> Fund Approvals
-        @if (store.isAdmin() && store.pendingFunds().length) { <span class="nav-badge">{{ store.pendingFunds().length }}</span> }
-      </a>
-      @if (store.isAdmin()) {
+      @if (store.featureOn('approvals')) {
         <a routerLink="/approvals" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
-          <i class="fa-solid fa-file-circle-check"></i> Bill Approvals
-          @if (store.pendingTxns().length) { <span class="nav-badge">{{ store.pendingTxns().length }}</span> }
-        </a>
-        <a routerLink="/billing-defaults" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
-          <i class="fa-solid fa-percent"></i> Billing Defaults
-        </a>
-        <a routerLink="/employees" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
-          <i class="fa-solid fa-users"></i> Employees
+          <i class="fa-solid fa-file-circle-check"></i> Approvals
+          @if (store.isAdmin() && (store.pendingTxns().length + store.pendingFunds().length)) {
+            <span class="nav-badge">{{ store.pendingTxns().length + store.pendingFunds().length }}</span>
+          }
         </a>
       }
-      <a routerLink="/reports" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
-        <i class="fa-solid fa-chart-pie"></i> Reports
-      </a>
-      <a routerLink="/fund-reports" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
-        <i class="fa-solid fa-hand-holding-dollar"></i> Fund Reports
-      </a>
+      @if (store.featureOn('reports')) {
+        <a routerLink="/reports" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+          <i class="fa-solid fa-chart-pie"></i> Report
+        </a>
+      }
       @if (store.isAdmin()) {
-        <a routerLink="/deleted" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
-          <i class="fa-solid fa-trash-can"></i> Deleted Invoices
-          @if (store.deletedTransactions().length) { <span class="nav-badge">{{ store.deletedTransactions().length }}</span> }
-        </a>
-        <a routerLink="/settings" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
-          <i class="fa-solid fa-gear"></i> Settings
+        @if (store.featureOn('expense')) {
+          <a routerLink="/expense" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+            <i class="fa-solid fa-receipt"></i> Expense
+          </a>
+        }
+        @if (store.featureOn('billingDefaults')) {
+          <a routerLink="/billing-defaults" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+            <i class="fa-solid fa-percent"></i> Billing Defaults
+          </a>
+        }
+        @if (store.featureOn('users')) {
+          <a routerLink="/employees" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+            <i class="fa-solid fa-users"></i> Users
+          </a>
+        }
+        @if (store.featureOn('deleted')) {
+          <a routerLink="/deleted" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+            <i class="fa-solid fa-trash-can"></i> Deleted Invoices
+            @if (store.deletedTransactions().length) { <span class="nav-badge">{{ store.deletedTransactions().length }}</span> }
+          </a>
+        }
+        @if (store.featureOn('settings')) {
+          <a routerLink="/settings" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+            <i class="fa-solid fa-gear"></i> Settings
+          </a>
+        }
+      }
+      @if (store.isSuperAdmin()) {
+        <a routerLink="/features" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+          <i class="fa-solid fa-toggle-on"></i> Feature Access
         </a>
       }
+      <a routerLink="/change-password" routerLinkActive="active" class="nav-item" (click)="menuOpen.set(false)">
+        <i class="fa-solid fa-key"></i> Change Password
+      </a>
     </nav>
   </aside>
 
@@ -74,4 +94,6 @@
       <router-outlet></router-outlet>
     </main>
   </div>
+
+  <app-dialog-host></app-dialog-host>
 </div>

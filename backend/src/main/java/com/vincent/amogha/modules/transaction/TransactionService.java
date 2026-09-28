@@ -70,7 +70,7 @@ public class TransactionService {
         if (t.customer == null || t.customer.name == null || t.customer.name.isBlank())
             throw ApiException.badRequest("Customer name required.");
 
-        boolean isAdmin = "admin".equals(principal.role());
+        boolean isAdmin = principal.isAdmin();
 
         // Only admins set margin & billing charges. Staff submit for approval; the admin
         // applies margin/charges when approving, so they are forced to 0 at submit.

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { KycFormComponent } from '../../shared/kyc-form/kyc-form.component';
 import { KycModel, emptyKyc, kycToRegistration, validateKyc } from '../../core/kyc';
 import { highlightField } from '../../core/ui';
@@ -21,6 +22,7 @@ export class RegisterCustomerComponent {
   store = inject(StoreService);
   private toast = inject(ToastService);
   private router = inject(Router);
+  private dlg = inject(DialogService);
 
   kyc: KycModel = emptyKyc();
   busy = signal(false);
@@ -41,8 +43,11 @@ export class RegisterCustomerComponent {
 
     // warn if a customer already exists with this phone number
     const existing = this.store.customers().find(c => c.phone === this.kyc.phone.trim());
-    if (existing && !confirm(
-      `A customer already exists with this number ${existing.phone} — ${existing.name}.\n\nUpdate their details?`)) {
+    if (existing && !(await this.dlg.confirm({
+      title: 'Customer already exists',
+      message: `A customer already exists with ${existing.phone} — ${existing.name}. Update their details?`,
+      okText: 'Update',
+    }))) {
       return;
     }
 

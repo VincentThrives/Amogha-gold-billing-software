@@ -7,6 +7,9 @@ public class AuthDtos {
 
     public record OtpResponse(String name, String role, String otp, boolean devDelivery) {}
 
+    public record LoginRequest(String phone, String password) {}
+    public record ChangePassword(String currentPassword, String newPassword) {}
+
     public record UserDto(String id, String name, String role, String phone) {}
     public record AuthResponse(String token, UserDto user) {}
 }

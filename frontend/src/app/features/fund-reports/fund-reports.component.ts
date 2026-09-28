@@ -31,12 +31,10 @@ export class FundReportsComponent {
 
   readonly FUND_METHODS = ['Cash', 'Bank deposit', 'RTGS', 'NEFT', 'UPI', 'IMPS', 'Cheque'];
 
-  // add-fund / add-expense form state (admin)
+  // add-fund form state (admin)
   fundAmount: number | null = null;
   fundMethod = '';
   fundNote = '';
-  expAmount: number | null = null;
-  expReason = '';
 
   inr0 = (n: number) => inr(n, 0);
   date = (iso: string) => billDate(iso);
@@ -97,19 +95,6 @@ export class FundReportsComponent {
       this.toast.ok(`Added ₹${amt.toLocaleString('en-IN')} to your fund.`);
       this.fundAmount = null; this.fundMethod = ''; this.fundNote = '';
     } catch (e: any) { this.toast.err(e?.error?.error || 'Could not add fund.'); }
-    finally { this.busy.set(false); }
-  }
-
-  async addExpense() {
-    const amt = Number(this.expAmount) || 0;
-    if (amt <= 0) { this.toast.err('Enter a valid expense amount.'); return; }
-    if (!this.expReason.trim()) { this.toast.err('Enter the reason for the expense.'); return; }
-    this.busy.set(true);
-    try {
-      await this.store.addExpense(amt, this.expReason.trim());
-      this.toast.ok(`Recorded expense of ₹${amt.toLocaleString('en-IN')}.`);
-      this.expAmount = null; this.expReason = '';
-    } catch (e: any) { this.toast.err(e?.error?.error || 'Could not record expense.'); }
     finally { this.busy.set(false); }
   }
 

@@ -1,0 +1,95 @@
+<div class="page-head">
+  <div><h2>Expenses</h2><p>Record shop expenses by category, then search &amp; filter</p></div>
+  <button class="btn btn-gold" [disabled]="busy()" (click)="downloadPdf()"><i class="fa-solid fa-download"></i> Download PDF</button>
+</div>
+
+<!-- Add expense + manage categories -->
+<div class="grid grid-2">
+  <div class="card">
+    <h3><i class="fa-solid fa-receipt"></i> Add expense</h3>
+    <div class="grid grid-2" style="align-items:end">
+      <div class="field"><label>Amount (₹)</label><input type="number" min="0" [(ngModel)]="expAmount" placeholder="e.g. 2500"></div>
+      <div class="field"><label>Category <span class="req">*</span></label>
+        <select [(ngModel)]="expCategory">
+          <option value="">— select —</option>
+          @for (c of categories(); track c.id) { <option [value]="c.name">{{ c.name }}</option> }
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:8px"><label>Note (optional)</label><input [(ngModel)]="expNote" placeholder="e.g. March shop rent"></div>
+    <button class="btn btn-err" style="margin-top:10px" [disabled]="busy()" (click)="addExpense()"><i class="fa-solid fa-minus"></i> Record expense</button>
+    @if (!categories().length) { <p class="hintline err">Add a category first →</p> }
+  </div>
+
+  <div class="card">
+    <h3><i class="fa-solid fa-tags"></i> Categories</h3>
+    <div class="row" style="gap:8px;align-items:end">
+      <div class="field" style="flex:1"><label>New category</label><input [(ngModel)]="newCategory" placeholder="e.g. Rent, Petrol, Salary" (keyup.enter)="addCategory()"></div>
+      <button class="btn btn-sm btn-gold" [disabled]="busy()" (click)="addCategory()"><i class="fa-solid fa-plus"></i> Add</button>
+    </div>
+    <div class="chips">
+      @for (c of categories(); track c.id) {
+        <span class="chip">{{ c.name }}
+          <button type="button" class="chip-x" title="Remove category" (click)="removeCategory(c.id, c.name)">&times;</button>
+        </span>
+      } @empty { <span class="muted">No categories yet.</span> }
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card">
+  <div class="range">
+    <div class="field"><label>From date</label><input type="date" [ngModel]="from()" (ngModelChange)="from.set($event)" [max]="to()"></div>
+    <div class="field"><label>To date</label><input type="date" [ngModel]="to()" (ngModelChange)="to.set($event)" [min]="from()"></div>
+    <div class="range-presets">
+      <button class="btn btn-sm btn-ghost" (click)="setToday()">Today</button>
+      <button class="btn btn-sm btn-ghost" (click)="setMonth()">This month</button>
+    </div>
+    <div class="field" style="min-width:160px"><label>Category</label>
+      <select [ngModel]="categoryFilter()" (ngModelChange)="categoryFilter.set($event)">
+        <option value="">All categories</option>
+        @for (c of categories(); track c.id) { <option [value]="c.name">{{ c.name }}</option> }
+      </select>
+    </div>
+    <div class="field" style="flex:1;min-width:180px"><label>Search keyword</label>
+      <input placeholder="Filter by category or note…" [ngModel]="search()" (ngModelChange)="search.set($event)" autocomplete="off">
+    </div>
+    <button class="btn btn-ghost" (click)="clearFilter()">Clear</button>
+  </div>
+</div>
+
+<div id="expenseDoc">
+  <div class="rep-doc-head">
+    <div class="rep-doc-title">{{ company()?.name || 'Amogha Gold Company' }}</div>
+    <div class="rep-doc-sub">Expenses · {{ from() }} to {{ to() }}{{ categoryFilter() ? ' · ' + categoryFilter() : '' }}{{ search() ? ' · “' + search() + '”' : '' }}</div>
+  </div>
+
+  <div class="rep-card total-c" style="max-width:320px;margin-bottom:16px">
+    <div class="rep-metal"><i class="fa-solid fa-indian-rupee-sign"></i> Total (filtered)</div>
+    <div class="rep-grams">{{ inr0(total()) }}</div>
+    <div class="rep-amt">{{ filtered().length }} expense{{ filtered().length === 1 ? '' : 's' }}</div>
+  </div>
+
+  <div class="card">
+    <h3>Expenses ({{ filtered().length }})</h3>
+    @if (!filtered().length) {
+      <div class="empty"><i class="fa-solid fa-receipt"></i>No expenses match the selected period / filter.</div>
+    } @else {
+      <div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Note</th><th>Added by</th></tr></thead>
+        <tbody>
+          @for (e of filtered(); track e.id) {
+            <tr>
+              <td>{{ date(e.date) }}</td>
+              <td><span class="badge gold">{{ e.category || '—' }}</span></td>
+              <td><b>{{ inr0(e.amount) }}</b></td>
+              <td>{{ e.reason || '—' }}</td>
+              <td>{{ addedByName(e) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table></div>
+    }
+  </div>
+</div>

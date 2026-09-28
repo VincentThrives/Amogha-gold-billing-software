@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Txn } from '../../core/models';
 import { inr, billDate } from '../../core/calc';
 
@@ -16,6 +17,7 @@ import { inr, billDate } from '../../core/calc';
 export class DeletedInvoicesComponent {
   store = inject(StoreService);
   private toast = inject(ToastService);
+  private dlg = inject(DialogService);
 
   deleted = this.store.deletedTransactions;
   busy = signal('');
@@ -31,7 +33,7 @@ export class DeletedInvoicesComponent {
   }
 
   async purge(t: Txn) {
-    if (!confirm(`Permanently delete bill ${t.billNo}? This cannot be undone.`)) return;
+    if (!(await this.dlg.confirm({ title: 'Delete forever', message: `Permanently delete bill ${t.billNo}? This cannot be undone.`, okText: 'Delete forever', danger: true }))) return;
     this.busy.set(t.id);
     try { await this.store.purgeTxn(t.id); this.toast.show('Bill deleted forever.'); }
     catch (e: any) { this.toast.err(e?.error?.error || 'Could not delete.'); }

@@ -1,0 +1,18 @@
+<div class="page-head">
+  <div><h2>Feature Access</h2><p>Turn features on or off for admins &amp; staff. You always keep full access.</p></div>
+</div>
+
+<div class="card" style="max-width:560px">
+  <div class="feat-list">
+    @for (f of FEATURES; track f.key) {
+      <div class="feat-row">
+        <span class="feat-label">{{ f.label }}</span>
+        <button type="button" class="toggle" role="switch" [attr.aria-checked]="isOn(f.key)"
+                [class.on]="isOn(f.key)" [disabled]="busy() === f.key" (click)="toggle(f.key)">
+          <span class="knob"></span>
+        </button>
+      </div>
+    }
+  </div>
+  <p class="hintline"><i class="fa-solid fa-circle-info"></i> A feature turned off disappears from the menu for admins and staff. The super admin still sees everything.</p>
+</div>

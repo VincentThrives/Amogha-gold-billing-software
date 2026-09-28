@@ -1,0 +1,22 @@
+@if (dlg.state(); as s) {
+  <div class="dlg-overlay" (click)="cancel()">
+    <div class="dlg-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="dlg-icon" [class.danger]="s.danger">
+        <i class="fa-solid" [ngClass]="s.kind === 'prompt' ? 'fa-pen-to-square' : (s.danger ? 'fa-triangle-exclamation' : 'fa-circle-question')"></i>
+      </div>
+      @if (s.title) { <h3 class="dlg-title">{{ s.title }}</h3> }
+      @if (s.message) { <p class="dlg-msg">{{ s.message }}</p> }
+
+      @if (s.kind === 'prompt') {
+        <input id="dlg_input" class="dlg-input" [type]="s.password ? 'password' : 'text'"
+               [placeholder]="s.placeholder" [(ngModel)]="input"
+               (keydown.enter)="ok()" (keydown.escape)="cancel()" autocomplete="off">
+      }
+
+      <div class="dlg-actions">
+        <button type="button" class="btn btn-ghost" (click)="cancel()">Cancel</button>
+        <button type="button" class="btn" [class.btn-err]="s.danger" [class.btn-gold]="!s.danger" (click)="ok()">{{ s.okText }}</button>
+      </div>
+    </div>
+  </div>
+}

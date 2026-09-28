@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { TransactionsComponent } from './transactions.component';
 import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Txn } from '../../core/models';
 
 function txn(id: string, name: string, phone: string, billNo: string, employeeId: string): Txn {
@@ -23,6 +24,8 @@ const TXNS: Txn[] = [
 ];
 
 let deleteTxn: jasmine.Spy;
+let dlgConfirm = true;
+const dlg = { confirm: () => Promise.resolve(dlgConfirm), prompt: () => Promise.resolve(null) };
 function make(isAdmin: boolean, meId: string) {
   deleteTxn = jasmine.createSpy('deleteTxn').and.resolveTo(undefined);
   const store = { transactions: signal(TXNS), isAdmin: () => isAdmin, me: () => ({ id: meId }), deleteTxn };
@@ -31,6 +34,7 @@ function make(isAdmin: boolean, meId: string) {
     providers: [
       { provide: StoreService, useValue: store },
       { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['show', 'err']) },
+      { provide: DialogService, useValue: dlg },
       provideRouter([]),
     ],
   });
@@ -77,14 +81,14 @@ describe('TransactionsComponent', () => {
   });
 
   it('onDelete confirms then soft-deletes the bill', async () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    dlgConfirm = true;
     const cmp = make(true, 'u-admin');
     await cmp.onDelete(cmp.results()[0]);
     expect(deleteTxn).toHaveBeenCalledWith('t1');
   });
 
   it('onDelete does nothing when cancelled', async () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    dlgConfirm = false;
     const cmp = make(true, 'u-admin');
     await cmp.onDelete(cmp.results()[0]);
     expect(deleteTxn).not.toHaveBeenCalled();

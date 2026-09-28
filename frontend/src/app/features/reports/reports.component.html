@@ -1,5 +1,5 @@
-<div class="page-head">
-  <div><h2>Reports</h2><p>{{ mineOnly() ? 'Your sales' : 'All sales' }} for a selected day or period</p></div>
+<div class="page-head" style="align-items:center">
+  <p class="muted" style="margin:0">{{ mineOnly() ? 'Your sales' : 'All sales' }} for the selected period</p>
   <button class="btn btn-gold" [disabled]="busy() || !rows().length" (click)="downloadPdf()">
     <i class="fa-solid fa-download"></i> Download PDF
   </button>

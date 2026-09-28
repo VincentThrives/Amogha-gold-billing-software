@@ -1,0 +1,20 @@
+<div class="login-wrap">
+  <div class="login-card">
+    <img src="logo.png" alt="Amogha Gold Company" class="login-logo">
+    <h1>Super Admin</h1>
+    <p class="login-sub">Restricted access</p>
+
+    <label>Email</label>
+    <input id="su_email" type="email" placeholder="Email address"
+           [(ngModel)]="username" (keydown.enter)="login()" autocomplete="username">
+
+    <label>Password</label>
+    <input id="su_password" type="password" placeholder="Password"
+           [(ngModel)]="password" (keydown.enter)="login()" autocomplete="current-password">
+
+    <button class="btn btn-gold btn-block" [disabled]="busy()" (click)="login()">
+      <i class="fa-solid fa-shield-halved"></i> Super Admin Login
+    </button>
+    <p class="login-hint err">{{ error() }}</p>
+  </div>
+</div>

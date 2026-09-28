@@ -1,0 +1,29 @@
+.dlg-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(24, 16, 32, .55); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  animation: dlg-fade .15s ease;
+}
+.dlg-card {
+  background: #fff; border-radius: 16px; width: 100%; max-width: 400px;
+  padding: 26px 24px 20px; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
+  animation: dlg-pop .18s cubic-bezier(.2, .9, .3, 1.3);
+}
+.dlg-icon {
+  width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f3ecfa; color: var(--purple, #4a1d5f); font-size: 22px;
+}
+.dlg-icon.danger { background: #fdeceb; color: #dc2626; }
+.dlg-title { margin: 0 0 6px; font-size: 18px; font-weight: 800; color: var(--ink, #1f2937); }
+.dlg-msg { margin: 0 0 16px; color: var(--muted, #6b7280); font-size: 14px; line-height: 1.5; }
+.dlg-input {
+  width: 100%; padding: 11px 13px; border: 1.5px solid var(--line, #e5e7eb); border-radius: 10px;
+  font-size: 15px; margin-bottom: 18px; outline: none; transition: border-color .12s ease;
+}
+.dlg-input:focus { border-color: var(--gold, #c9a227); box-shadow: 0 0 0 3px rgba(201, 162, 39, .15); }
+.dlg-actions { display: flex; gap: 10px; justify-content: center; }
+.dlg-actions .btn { min-width: 110px; }
+
+@keyframes dlg-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dlg-pop { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }

@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { AdminFund, AppState, BillingConfig, Company, Expense, FundRequest, Rates, RegisteredCustomer, Txn, TxnItem, User } from '../models';
+import { AdminFund, AppState, BillingConfig, Company, Expense, ExpenseCategory, FundRequest, Rates, RegisteredCustomer, Txn, TxnItem, User } from '../models';
 import { AuthService } from './auth.service';
 import { latestPerCustomer } from '../calc';
 
@@ -26,9 +26,14 @@ export class StoreService {
   readonly deletedTransactions = signal<Txn[]>([]);
   readonly adminFunds = signal<AdminFund[]>([]);
   readonly expenses = signal<Expense[]>([]);
+  readonly expenseCategories = signal<ExpenseCategory[]>([]);
   readonly adminFundAvailable = signal<number>(0);
+  readonly features = signal<Record<string, boolean>>({});
 
-  readonly isAdmin = computed(() => this.me()?.role === 'admin');
+  readonly isSuperAdmin = computed(() => this.me()?.role === 'superadmin');
+  readonly isAdmin = computed(() => { const r = this.me()?.role; return r === 'admin' || r === 'superadmin'; });
+  /** Is a feature enabled? Super admin always sees everything; others follow the toggle (default on). */
+  featureOn(key: string): boolean { return this.isSuperAdmin() || this.features()[key] !== false; }
   readonly latestTxns = computed(() => latestPerCustomer(this.transactions()));
   readonly pendingTxns = computed(() => this.transactions().filter(t => t.status === 'pending'));
   readonly pendingFunds = computed(() => this.funds().filter(f => f.status === 'pending'));
@@ -64,7 +69,9 @@ export class StoreService {
     this.deletedTransactions.set(s.deletedTransactions || []);
     this.adminFunds.set(s.adminFunds || []);
     this.expenses.set(s.expenses || []);
+    this.expenseCategories.set(s.expenseCategories || []);
     this.adminFundAvailable.set(s.adminFundAvailable || 0);
+    this.features.set(s.features || {});
     return true;
   }
 
@@ -72,7 +79,8 @@ export class StoreService {
     this.me.set(null); this.users.set([]); this.company.set(null);
     this.rates.set(EMPTY_RATES); this.transactions.set([]); this.funds.set([]); this.balances.set({});
     this.customers.set([]); this.billingConfig.set(DEFAULT_BILLING); this.deletedTransactions.set([]);
-    this.adminFunds.set([]); this.expenses.set([]); this.adminFundAvailable.set(0);
+    this.adminFunds.set([]); this.expenses.set([]); this.expenseCategories.set([]); this.adminFundAvailable.set(0);
+    this.features.set({});
   }
 
   /* ---- bill number (client side; server keeps it) ---- */
@@ -88,7 +96,18 @@ export class StoreService {
   /* ---- writes (call API, then re-sync) ---- */
   async setRates(gold: number, silver: number) { await firstValueFrom(this.http.put('/api/rates', { gold, silver })); await this.sync(); }
   async setCompany(c: Partial<Company>) { await firstValueFrom(this.http.put('/api/company', c)); await this.sync(); }
-  async addEmployee(name: string, phone: string) { await firstValueFrom(this.http.post('/api/users', { name, phone })); await this.sync(); }
+  async createUser(name: string, phone: string, role: 'admin' | 'employee', password: string) {
+    await firstValueFrom(this.http.post('/api/users', { name, phone, role, password })); await this.sync();
+  }
+  async resetUserPassword(id: string, password: string) {
+    await firstValueFrom(this.http.post(`/api/users/${encodeURIComponent(id)}/reset-password`, { password }));
+  }
+  async changeUserPhone(id: string, phone: string) {
+    await firstValueFrom(this.http.post(`/api/users/${encodeURIComponent(id)}/phone`, { phone })); await this.sync();
+  }
+  async setFeatures(flags: Record<string, boolean>) {
+    await firstValueFrom(this.http.put('/api/features', flags)); await this.sync();
+  }
   async removeEmployee(id: string) { await firstValueFrom(this.http.delete(`/api/users/${encodeURIComponent(id)}`)); await this.sync(); }
   async addTxn(txn: Txn): Promise<Txn> { const saved = await firstValueFrom(this.http.post<Txn>('/api/transactions', txn)); await this.sync(); return saved; }
   /** register (upsert-by-phone) a customer; returns whether they already existed */
@@ -99,7 +118,9 @@ export class StoreService {
   }
   async addFundRequest(amount: number, note: string) { await firstValueFrom(this.http.post('/api/funds', { amount, note })); await this.sync(); }
   async addAdminFund(amount: number, method: string, note: string) { await firstValueFrom(this.http.post('/api/admin-funds', { amount, method, note })); await this.sync(); }
-  async addExpense(amount: number, reason: string) { await firstValueFrom(this.http.post('/api/expenses', { amount, reason })); await this.sync(); }
+  async addExpense(amount: number, category: string, reason: string) { await firstValueFrom(this.http.post('/api/expenses', { amount, category, reason })); await this.sync(); }
+  async addExpenseCategory(name: string) { await firstValueFrom(this.http.post('/api/expense-categories', { name })); await this.sync(); }
+  async removeExpenseCategory(id: string) { await firstValueFrom(this.http.delete(`/api/expense-categories/${encodeURIComponent(id)}`)); await this.sync(); }
   async decideFund(reqId: string, approve: boolean, method = '', reference = '') { await firstValueFrom(this.http.post(`/api/funds/${encodeURIComponent(reqId)}/decide`, { approve, method, reference })); await this.sync(); }
   async setBillingConfig(defaultMargin: number, defaultBillingCharges: number) { await firstValueFrom(this.http.put('/api/billing-config', { defaultMargin, defaultBillingCharges })); await this.sync(); }
   async approveTxn(id: string, items: TxnItem[], margin: number, billingCharges: number, releaseAmount = 0, releaseMethod = '', releaseBank = '') {

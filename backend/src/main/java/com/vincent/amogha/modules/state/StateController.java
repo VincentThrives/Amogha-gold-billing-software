@@ -14,7 +14,10 @@ import com.vincent.amogha.modules.settings.CompanyRepository;
 import com.vincent.amogha.modules.settings.RatesRepository;
 import com.vincent.amogha.modules.ledger.AdminFundRepository;
 import com.vincent.amogha.modules.ledger.ExpenseRepository;
+import com.vincent.amogha.modules.ledger.ExpenseCategoryRepository;
 import com.vincent.amogha.modules.ledger.LedgerService;
+import com.vincent.amogha.modules.feature.FeatureFlags;
+import com.vincent.amogha.modules.feature.FeatureRepository;
 import com.vincent.amogha.modules.transaction.TxnRepository;
 import com.vincent.amogha.modules.user.User;
 import com.vincent.amogha.modules.user.UserRepository;
@@ -39,30 +42,39 @@ public class StateController {
     private final BillingConfigRepository billingConfig;
     private final AdminFundRepository adminFunds;
     private final ExpenseRepository expenses;
+    private final ExpenseCategoryRepository expenseCategories;
+    private final FeatureRepository featureFlags;
     private final LedgerService ledger;
 
     public StateController(UserRepository users, CompanyRepository companies, RatesRepository rates,
                            TxnRepository txns, FundRepository funds, BalanceRepository balances,
                            CustomerRepository customers, BillingConfigRepository billingConfig,
-                           AdminFundRepository adminFunds, ExpenseRepository expenses, LedgerService ledger) {
+                           AdminFundRepository adminFunds, ExpenseRepository expenses,
+                           ExpenseCategoryRepository expenseCategories, FeatureRepository featureFlags,
+                           LedgerService ledger) {
         this.users = users; this.companies = companies; this.rates = rates;
         this.txns = txns; this.funds = funds; this.balances = balances;
         this.customers = customers; this.billingConfig = billingConfig;
-        this.adminFunds = adminFunds; this.expenses = expenses; this.ledger = ledger;
+        this.adminFunds = adminFunds; this.expenses = expenses;
+        this.expenseCategories = expenseCategories; this.featureFlags = featureFlags; this.ledger = ledger;
     }
 
     @GetMapping
     public Map<String, Object> state(@AuthenticationPrincipal AmoghaPrincipal principal) {
         User me = users.findById(principal.userId())
                 .orElseThrow(() -> ApiException.unauthorized("Account not found."));
-        boolean isAdmin = "admin".equals(me.role);
+        boolean isSuper = "superadmin".equals(me.role);
+        boolean isAdmin = "admin".equals(me.role) || isSuper;
 
         List<UserDto> userList;
         List<FundRequest> fundList;
         Map<String, Double> balanceMap = new HashMap<>();
 
         if (isAdmin) {
-            userList = users.findAll().stream().map(StateController::toDto).toList();
+            // normal admins never see the super-admin account in the user list
+            userList = users.findAll().stream()
+                    .filter(u -> isSuper || !"superadmin".equals(u.role))
+                    .map(StateController::toDto).toList();
             fundList = funds.findAllByOrderByRequestedAtDesc();
             for (Balance b : balances.findAll()) balanceMap.put(b.employeeId, b.amount);
         } else {
@@ -90,7 +102,9 @@ public class StateController {
         // admin cash ledger — admin only
         out.put("adminFunds", isAdmin ? adminFunds.findAllByOrderByDateDesc() : java.util.List.of());
         out.put("expenses", isAdmin ? expenses.findAllByOrderByDateDesc() : java.util.List.of());
+        out.put("expenseCategories", isAdmin ? expenseCategories.findAllByOrderByNameAsc() : java.util.List.of());
         out.put("adminFundAvailable", isAdmin ? ledger.availableAdminFund() : 0.0);
+        out.put("features", featureFlags.findById("features").orElseGet(FeatureFlags::allOn).flags);
         return out;
     }
 

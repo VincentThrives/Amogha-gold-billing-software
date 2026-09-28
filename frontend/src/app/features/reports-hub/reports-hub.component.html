@@ -1,0 +1,15 @@
+<div class="page-head">
+  <div><h2>Reports</h2><p>Sales and fund reports for a selected day or period</p></div>
+</div>
+
+<div class="tabs">
+  <button type="button" class="tab" [class.on]="tab() === 'sales'" (click)="tab.set('sales')">
+    <i class="fa-solid fa-chart-pie"></i> Sales
+  </button>
+  <button type="button" class="tab" [class.on]="tab() === 'fund'" (click)="tab.set('fund')">
+    <i class="fa-solid fa-hand-holding-dollar"></i> Fund Report
+  </button>
+</div>
+
+@if (tab() === 'sales') { <app-reports></app-reports> }
+@if (tab() === 'fund') { <app-fund-reports></app-fund-reports> }

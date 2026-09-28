@@ -67,16 +67,19 @@ export class ReportsComponent {
     const el = document.getElementById('salesReportDoc');
     if (!el) return;
     this.busy.set(true);
+    el.classList.add('pdf-export');   // hide the on-screen action button in the export
     try {
       const html2pdf = (await import('html2pdf.js')).default;
       await html2pdf().set({
-        margin: 6,
+        margin: 8,
         filename: `Amogha_Sales_${this.from()}_to_${this.to()}.pdf`,
-        image: { type: 'jpeg', quality: 0.97 },
-        html2canvas: { scale: 2, useCORS: true },
+        // PNG (lossless) + higher scale keeps text crisp; JPEG blurred it
+        image: { type: 'png' },
+        html2canvas: { scale: 3, useCORS: true, backgroundColor: '#ffffff', windowWidth: el.scrollWidth },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+        pagebreak: { mode: ['css', 'legacy'] },
       }).from(el).save();
     } catch { window.print(); }
-    finally { this.busy.set(false); }
+    finally { el.classList.remove('pdf-export'); this.busy.set(false); }
   }
 }

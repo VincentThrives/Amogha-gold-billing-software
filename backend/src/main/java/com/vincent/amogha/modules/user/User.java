@@ -7,8 +7,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class User {
     @Id public String id;
     public String name;
-    public String role;   // "admin" | "employee"
-    public String phone;
+    public String role;         // "superadmin" | "admin" | "employee"
+    public String phone;        // login username for admin/employee (unique)
+    public String email;        // login username for the super admin
+    public String passwordHash; // BCrypt hash
 
     public User() {}
 

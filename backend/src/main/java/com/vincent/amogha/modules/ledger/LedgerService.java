@@ -17,18 +17,20 @@ public class LedgerService {
 
     private final AdminFundRepository adminFunds;
     private final ExpenseRepository expenses;
+    private final ExpenseCategoryRepository categories;
     private final FundRepository funds;
     private final TxnRepository txns;
     private final UserRepository users;
 
-    public LedgerService(AdminFundRepository adminFunds, ExpenseRepository expenses, FundRepository funds,
+    public LedgerService(AdminFundRepository adminFunds, ExpenseRepository expenses,
+                         ExpenseCategoryRepository categories, FundRepository funds,
                          TxnRepository txns, UserRepository users) {
-        this.adminFunds = adminFunds; this.expenses = expenses; this.funds = funds;
-        this.txns = txns; this.users = users;
+        this.adminFunds = adminFunds; this.expenses = expenses; this.categories = categories;
+        this.funds = funds; this.txns = txns; this.users = users;
     }
 
     public AdminFund addFund(double amount, String method, String note, AmoghaPrincipal principal) {
-        if (!"admin".equals(principal.role())) throw ApiException.forbidden("Only the admin can add funds.");
+        if (!principal.isAdmin()) throw ApiException.forbidden("Only the admin can add funds.");
         if (amount <= 0) throw ApiException.badRequest("Enter a valid amount.");
         AdminFund f = new AdminFund();
         f.id = Ids.genId("af");
@@ -41,17 +43,37 @@ public class LedgerService {
         return adminFunds.save(f);
     }
 
-    public Expense addExpense(double amount, String reason, AmoghaPrincipal principal) {
-        if (!"admin".equals(principal.role())) throw ApiException.forbidden("Only the admin can add expenses.");
+    public Expense addExpense(double amount, String category, String reason, AmoghaPrincipal principal) {
+        if (!principal.isAdmin()) throw ApiException.forbidden("Only the admin can add expenses.");
         if (amount <= 0) throw ApiException.badRequest("Enter a valid amount.");
-        if (reason == null || reason.isBlank()) throw ApiException.badRequest("Enter the reason for the expense.");
+        if (category == null || category.isBlank()) throw ApiException.badRequest("Select an expense category.");
+        String canonical = categories.findByNameIgnoreCase(category.trim())
+                .orElseThrow(() -> ApiException.badRequest("Unknown expense category. Add it first.")).name;
         Expense e = new Expense();
         e.id = Ids.genId("exp");
         e.amount = amount;
-        e.reason = reason.trim();
+        e.category = canonical;
+        e.reason = reason == null ? "" : reason.trim();
         e.date = Instant.now().toString();
         e.createdBy = principal.userId();
+        e.createdByName = principal.name();
         return expenses.save(e);
+    }
+
+    /** Admin adds a new expense category / keyword. */
+    public ExpenseCategory addCategory(String name, AmoghaPrincipal principal) {
+        if (!principal.isAdmin()) throw ApiException.forbidden("Only the admin can manage categories.");
+        if (name == null || name.isBlank()) throw ApiException.badRequest("Enter a category name.");
+        String clean = name.trim();
+        if (categories.findByNameIgnoreCase(clean).isPresent())
+            throw ApiException.badRequest("That category already exists.");
+        return categories.save(new ExpenseCategory(Ids.genId("cat"), clean));
+    }
+
+    /** Admin removes an expense category. Existing expenses keep their stored category text. */
+    public void removeCategory(String id, AmoghaPrincipal principal) {
+        if (!principal.isAdmin()) throw ApiException.forbidden("Only the admin can manage categories.");
+        categories.deleteById(id);
     }
 
     /** Capital the admin has added, minus funds approved to staff, minus expenses,

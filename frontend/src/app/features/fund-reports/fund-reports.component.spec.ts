@@ -41,7 +41,7 @@ describe('FundReportsComponent (admin)', () => {
     const { cmp } = build({
       adminFunds: signal<AdminFund[]>([{ id: 'af1', amount: 10000, method: 'Cash', note: 'seed', date: NOW, addedBy: 'u-admin', addedByName: 'Admin' }]),
       funds: signal<FundRequest[]>([approvedFund('fr1', 'u-emp1', 5000)]),
-      expenses: signal<Expense[]>([{ id: 'e1', amount: 2000, reason: 'rent', date: NOW, createdBy: 'u-admin' }]),
+      expenses: signal<Expense[]>([{ id: 'e1', amount: 2000, category: 'Rent', reason: 'rent', date: NOW, createdBy: 'u-admin', createdByName: 'Admin' }]),
       adminFundAvailable: signal(3000),
       balanceOf: (id: string) => (id === 'u-emp1' ? 5000 : 0),
     });
@@ -80,20 +80,6 @@ describe('FundReportsComponent (admin)', () => {
     expect(toast.err).toHaveBeenCalledWith('Select how the fund was added (Cash / RTGS / NEFT…).');
   });
 
-  it('addExpense blocks when the reason is empty', async () => {
-    const { cmp, store, toast } = build();
-    cmp.expAmount = 2500; cmp.expReason = '';
-    await cmp.addExpense();
-    expect(store.addExpense).not.toHaveBeenCalled();
-    expect(toast.err).toHaveBeenCalledWith('Enter the reason for the expense.');
-  });
-
-  it('addExpense calls the store with amount + reason', async () => {
-    const { cmp, store } = build();
-    cmp.expAmount = 2500; cmp.expReason = 'shop rent';
-    await cmp.addExpense();
-    expect(store.addExpense).toHaveBeenCalledWith(2500, 'shop rent');
-  });
 });
 
 describe('FundReportsComponent (employee)', () => {

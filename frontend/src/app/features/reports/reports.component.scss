@@ -22,3 +22,7 @@
 .rep-amt b { color: var(--ink); }
 
 @media (max-width: 700px) { .report-cards { grid-template-columns: 1fr; } }
+
+/* Export mode: drop the on-screen "open invoice" action column so the PDF is clean */
+.pdf-export table th:last-child,
+.pdf-export table td:last-child { display: none; }

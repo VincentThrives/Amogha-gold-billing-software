@@ -31,6 +31,11 @@ public class SecurityConfig {
     }
 
     @Bean
+    public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
+        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
@@ -38,16 +43,22 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/auth/**", "/api/ping", "/api/health", "/actuator/health").permitAll()
+                // public auth: password login (OTP endpoints kept permitted in case re-enabled).
+                // NOTE: /api/auth/change-password is intentionally NOT here — it requires a token.
+                .requestMatchers("/api/auth/login", "/api/auth/request-otp", "/api/auth/verify-otp",
+                        "/api/ping", "/api/health", "/actuator/health").permitAll()
                 // admin-only writes
                 .requestMatchers(HttpMethod.PUT, "/api/rates", "/api/company", "/api/billing-config").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/users", "/api/users/*/reset-password", "/api/users/*/phone").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/funds/*/decide").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/admin-funds", "/api/expenses", "/api/expense-categories").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/expense-categories/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/transactions/*/approve", "/api/transactions/*/reject",
                         "/api/transactions/*/delete", "/api/transactions/*/restore").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/transactions/**").hasRole("ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/features").hasRole("SUPERADMIN")
                 // everything else under /api needs a valid token
                 .requestMatchers("/api/**").authenticated()
                 // static frontend (Angular) is public

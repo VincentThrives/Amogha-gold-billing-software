@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angul
 import { InvoiceComponent } from './invoice.component';
 import { StoreService } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Txn } from '../../core/models';
 
 const TXN = {
@@ -19,6 +20,8 @@ describe('InvoiceComponent', () => {
   let deleteTxn: jasmine.Spy;
   let toast: jasmine.SpyObj<ToastService>;
   let router: Router;
+  let dlgConfirm = true;
+  const dlg = { confirm: () => Promise.resolve(dlgConfirm), prompt: () => Promise.resolve(null) };
 
   function build(txn: Txn | undefined = TXN) {
     deleteTxn = jasmine.createSpy('deleteTxn').and.resolveTo(undefined);
@@ -35,6 +38,7 @@ describe('InvoiceComponent', () => {
       providers: [
         { provide: StoreService, useValue: store },
         { provide: ToastService, useValue: toast },
+        { provide: DialogService, useValue: dlg },
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 'txn-1' }) } } },
       ],
@@ -69,7 +73,7 @@ describe('InvoiceComponent', () => {
   });
 
   it('deleteBill (confirmed) soft-deletes and returns to the list', async () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    dlgConfirm = true;
     const cmp = build();
     await cmp.deleteBill();
     expect(deleteTxn).toHaveBeenCalledWith('txn-1');
@@ -77,7 +81,7 @@ describe('InvoiceComponent', () => {
   });
 
   it('deleteBill (cancelled) does nothing', async () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    dlgConfirm = false;
     const cmp = build();
     await cmp.deleteBill();
     expect(deleteTxn).not.toHaveBeenCalled();
@@ -101,6 +105,7 @@ describe('InvoiceComponent', () => {
       providers: [
         { provide: StoreService, useValue: store },
         { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['show', 'err']) },
+        { provide: DialogService, useValue: dlg },
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 'txn-1' }) } } },
       ],

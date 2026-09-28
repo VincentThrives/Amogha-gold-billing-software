@@ -1,5 +1,5 @@
-<div class="page-head">
-  <div><h2>Fund Reports</h2><p>{{ isAdmin() ? 'Your fund, staff approvals & expenses' : 'Funds approved to you' }} for a selected day or period</p></div>
+<div class="page-head" style="align-items:center">
+  <p class="muted" style="margin:0">{{ isAdmin() ? 'Your fund and staff approvals' : 'Funds approved to you' }} for the selected period</p>
   <button class="btn btn-gold" [disabled]="busy()" (click)="downloadPdf()">
     <i class="fa-solid fa-download"></i> Download PDF
   </button>
@@ -17,31 +17,22 @@
   </div>
 </div>
 
-<!-- Admin: add fund + add expense -->
+<!-- Admin: add fund -->
 @if (isAdmin()) {
-  <div class="grid grid-2">
-    <div class="card">
-      <h3><i class="fa-solid fa-money-bill-wave"></i> Add my fund</h3>
-      <div class="grid grid-2" style="align-items:end">
-        <div class="field"><label>Amount (₹)</label><input type="number" min="0" [(ngModel)]="fundAmount" placeholder="e.g. 500000"></div>
-        <div class="field"><label>Added via <span class="req">*</span></label>
-          <select [(ngModel)]="fundMethod">
-            <option value="">— select —</option>
-            @for (m of FUND_METHODS; track m) { <option [value]="m">{{ m }}</option> }
-          </select>
-        </div>
+  <div class="card">
+    <h3><i class="fa-solid fa-money-bill-wave"></i> Add my fund</h3>
+    <div class="grid grid-2" style="align-items:end;max-width:640px">
+      <div class="field"><label>Amount (₹)</label><input type="number" min="0" [(ngModel)]="fundAmount" placeholder="e.g. 500000"></div>
+      <div class="field"><label>Added via <span class="req">*</span></label>
+        <select [(ngModel)]="fundMethod">
+          <option value="">— select —</option>
+          @for (m of FUND_METHODS; track m) { <option [value]="m">{{ m }}</option> }
+        </select>
       </div>
-      <div class="field" style="margin-top:8px"><label>Note (optional)</label><input [(ngModel)]="fundNote" placeholder="e.g. cash deposit"></div>
-      <button class="btn btn-gold" style="margin-top:10px" [disabled]="busy()" (click)="addFund()"><i class="fa-solid fa-plus"></i> Add fund</button>
     </div>
-    <div class="card">
-      <h3><i class="fa-solid fa-receipt"></i> Add expense</h3>
-      <div class="grid grid-2" style="align-items:end">
-        <div class="field"><label>Amount (₹)</label><input type="number" min="0" [(ngModel)]="expAmount" placeholder="e.g. 2500"></div>
-        <div class="field"><label>Reason <span class="req">*</span></label><input [(ngModel)]="expReason" placeholder="e.g. shop rent"></div>
-      </div>
-      <button class="btn btn-err" style="margin-top:10px" [disabled]="busy()" (click)="addExpense()"><i class="fa-solid fa-minus"></i> Record expense</button>
-    </div>
+    <div class="field" style="margin-top:8px;max-width:640px"><label>Note (optional)</label><input [(ngModel)]="fundNote" placeholder="e.g. cash deposit"></div>
+    <button class="btn btn-gold" style="margin-top:10px" [disabled]="busy()" (click)="addFund()"><i class="fa-solid fa-plus"></i> Add fund</button>
+    <p class="hintline"><i class="fa-solid fa-circle-info"></i> Record shop expenses in the <b>Expense</b> section.</p>
   </div>
 }
 
@@ -147,22 +138,6 @@
       }
     </div>
 
-    <!-- Expenses in the period -->
-    <div class="card">
-      <h3>Expenses ({{ expensesInPeriod().length }})</h3>
-      @if (!expensesInPeriod().length) {
-        <div class="empty"><i class="fa-solid fa-receipt"></i>No expenses in the selected period.</div>
-      } @else {
-        <div class="table-wrap"><table>
-          <thead><tr><th>Date</th><th>Amount</th><th>Reason</th></tr></thead>
-          <tbody>
-            @for (x of expensesInPeriod(); track x.id) {
-              <tr><td>{{ date(x.date) }}</td><td><b>{{ inr0(x.amount) }}</b></td><td>{{ x.reason }}</td></tr>
-            }
-          </tbody>
-        </table></div>
-      }
-    </div>
   } @else {
     <!-- Employee self-view -->
     <div class="report-cards">

@@ -1,115 +1,60 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { LoginComponent } from './login.component';
 import { AuthService } from '../../core/services/auth.service';
 import { StoreService } from '../../core/services/store.service';
 
-describe('LoginComponent', () => {
+describe('LoginComponent (phone + password)', () => {
+  let cmp: LoginComponent;
   let auth: jasmine.SpyObj<AuthService>;
   let store: jasmine.SpyObj<StoreService>;
-  let router: jasmine.SpyObj<Router>;
-  let cmp: LoginComponent;
+  let router: Router;
 
   beforeEach(() => {
-    auth = jasmine.createSpyObj('AuthService', ['requestOtp', 'verifyOtp']);
+    auth = jasmine.createSpyObj('AuthService', ['login']);
     store = jasmine.createSpyObj('StoreService', ['sync']);
-    router = jasmine.createSpyObj('Router', ['navigate']);
+    store.sync.and.resolveTo(true);
     TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
         { provide: AuthService, useValue: auth },
         { provide: StoreService, useValue: store },
-        { provide: Router, useValue: router },
+        provideRouter([]),
       ],
     });
+    router = TestBed.inject(Router);
+    spyOn(router, 'navigate');
     cmp = TestBed.createComponent(LoginComponent).componentInstance;
   });
 
-  it('role toggle switches between admin and employee', () => {
-    expect(cmp.role()).toBe('admin');
-    cmp.role.set('employee');
-    expect(cmp.role()).toBe('employee');
+  it('blocks login with an invalid phone', async () => {
+    cmp.phone = '123'; cmp.password = 'x';
+    await cmp.login();
+    expect(auth.login).not.toHaveBeenCalled();
+    expect(cmp.error()).toContain('10-digit');
   });
 
-  it('onPhone strips non-digits and caps at 10', () => {
-    cmp.onPhone('9a8b76543210999');
-    expect(cmp.phone).toBe('9876543210');
+  it('blocks login when the password is empty', async () => {
+    cmp.phone = '9999900001'; cmp.password = '';
+    await cmp.login();
+    expect(auth.login).not.toHaveBeenCalled();
+    expect(cmp.error()).toContain('password');
   });
 
-  it('sendOtp rejects an invalid phone without calling the API', async () => {
-    cmp.phone = '123';
-    await cmp.sendOtp();
-    expect(auth.requestOtp).not.toHaveBeenCalled();
-    expect(cmp.hint()).toContain('valid 10-digit');
-  });
-
-  it('sendOtp success moves to step 2 and shows the OTP', async () => {
-    cmp.phone = '9999900001';
-    auth.requestOtp.and.resolveTo({ name: 'Amogha Admin', role: 'admin', otp: '123456' });
-    await cmp.sendOtp();
-    expect(cmp.step()).toBe(2);
-    expect(cmp.shownOtp()).toBe('123456');
-    expect(cmp.generatedFor()).toContain('Amogha Admin');
-  });
-
-  it('sendOtp surfaces a server error in the hint', async () => {
-    cmp.phone = '9999900009';
-    auth.requestOtp.and.rejectWith({ error: { error: 'No admin account found for this number.' } });
-    await cmp.sendOtp();
-    expect(cmp.hint()).toContain('No admin account');
-  });
-
-  it('verify success navigates to the dashboard', async () => {
-    cmp.phone = '9999900001'; cmp.otp = '123456';
-    auth.verifyOtp.and.resolveTo({ id: 'u-admin', name: 'A', role: 'admin', phone: '9999900001' });
-    store.sync.and.resolveTo(true);
-    await cmp.verify();
+  it('logs in and routes to the dashboard', async () => {
+    auth.login.and.resolveTo({ id: 'u-admin', name: 'Admin', role: 'admin', phone: '9999900001' } as any);
+    cmp.phone = '9999900001'; cmp.password = 'admin@2024';
+    await cmp.login();
+    expect(auth.login).toHaveBeenCalledWith('9999900001', 'admin@2024');
+    expect(store.sync).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 
-  it('verify failure shows an error and does not navigate', async () => {
-    cmp.otp = '000000';
-    auth.verifyOtp.and.rejectWith({ error: { error: 'Incorrect OTP. Please try again.' } });
-    await cmp.verify();
-    expect(cmp.error()).toContain('Incorrect OTP');
+  it('shows an error on wrong credentials and does not navigate', async () => {
+    auth.login.and.rejectWith({ error: { error: 'Incorrect phone number or password.' } });
+    cmp.phone = '9999900001'; cmp.password = 'wrong';
+    await cmp.login();
+    expect(cmp.error()).toContain('Incorrect');
     expect(router.navigate).not.toHaveBeenCalled();
-  });
-});
-
-describe('LoginComponent field highlight', () => {
-  let fixture: ComponentFixture<LoginComponent>;
-  let cmp: LoginComponent;
-  let auth: jasmine.SpyObj<AuthService>;
-
-  beforeEach(() => {
-    auth = jasmine.createSpyObj('AuthService', ['requestOtp', 'verifyOtp']);
-    TestBed.configureTestingModule({
-      imports: [LoginComponent],
-      providers: [
-        { provide: AuthService, useValue: auth },
-        { provide: StoreService, useValue: jasmine.createSpyObj('StoreService', ['sync']) },
-        { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
-      ],
-    });
-    fixture = TestBed.createComponent(LoginComponent);
-    cmp = fixture.componentInstance;
-    document.body.appendChild(fixture.nativeElement); // so getElementById resolves
-    fixture.detectChanges();
-  });
-  afterEach(() => fixture.nativeElement.remove());
-
-  it('highlights the phone field on an invalid number', async () => {
-    cmp.phone = '123';
-    await cmp.sendOtp();
-    expect(document.getElementById('login_phone')!.classList.contains('input-err')).toBeTrue();
-  });
-
-  it('highlights the OTP field when verification fails', async () => {
-    cmp.step.set(2);
-    fixture.detectChanges();
-    cmp.otp = '000000';
-    auth.verifyOtp.and.rejectWith({ error: { error: 'Incorrect OTP. Please try again.' } });
-    await cmp.verify();
-    expect(document.getElementById('login_otp')!.classList.contains('input-err')).toBeTrue();
   });
 });

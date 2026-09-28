@@ -39,9 +39,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         claims.get("name", String.class),
                         role,
                         claims.get("phone", String.class));
-                var auth = new UsernamePasswordAuthenticationToken(
-                        principal, null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase())));
+                // super admin also carries the admin authority so it passes every admin-gated rule
+                var authorities = "superadmin".equals(role)
+                        ? List.of(new SimpleGrantedAuthority("ROLE_SUPERADMIN"), new SimpleGrantedAuthority("ROLE_ADMIN"))
+                        : List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+                var auth = new UsernamePasswordAuthenticationToken(principal, null, authorities);
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (Exception ignored) {
