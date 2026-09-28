@@ -6,8 +6,9 @@ services:
     name: amogha-billing
     runtime: docker
     plan: free
-    rootDir: amogha-billing
+    # Build context must be the repo root so the Dockerfile can see frontend/ and backend/.
     dockerfilePath: ./Dockerfile
+    dockerContext: .
     autoDeploy: true
     healthCheckPath: /actuator/health
     envVars:
