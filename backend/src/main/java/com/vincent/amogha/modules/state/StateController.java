@@ -92,12 +92,19 @@ public class StateController {
         // Admin sees every active bill; an employee sees only the bills they submitted
         // (admin-created bills and other employees' bills stay out of their view).
         var active = allTxns.stream().filter(t -> !t.deleted);
-        out.put("transactions", (isAdmin ? active : active.filter(t -> me.id.equals(t.employeeId))).toList());
+        // Drop the base64 selfie image from the list payloads — each can be ~1 MB and
+        // is never shown in a list/invoice view, so shipping them all (and re-polling
+        // every 20s) bloats /api/state to tens of MB and OOMs small instances. The
+        // selfie is fetched on demand (GET /api/customers/{id}) where it is actually used.
+        out.put("transactions", (isAdmin ? active : active.filter(t -> me.id.equals(t.employeeId)))
+                .map(t -> { t.selfie = null; return t; }).toList());
         out.put("deletedTransactions", isAdmin
-                ? allTxns.stream().filter(t -> t.deleted).toList() : java.util.List.of()); // recycle bin (admin)
+                ? allTxns.stream().filter(t -> t.deleted).map(t -> { t.selfie = null; return t; }).toList()
+                : java.util.List.of()); // recycle bin (admin)
         out.put("funds", fundList);
         out.put("balances", balanceMap);
-        out.put("customers", customers.findAllByOrderByCreatedAtDesc());  // shared to all staff
+        out.put("customers", customers.findAllByOrderByCreatedAtDesc().stream()
+                .map(c -> { c.selfie = null; return c; }).toList());  // shared to all staff (selfie stripped)
         out.put("billingConfig", billingConfig.findById("billing").orElseGet(BillingConfig::defaults));
         // admin cash ledger — admin only
         out.put("adminFunds", isAdmin ? adminFunds.findAllByOrderByDateDesc() : java.util.List.of());

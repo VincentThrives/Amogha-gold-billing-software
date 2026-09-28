@@ -21,6 +21,12 @@ public class CustomerController {
         this.repo = repo;
     }
 
+    /** Full customer incl. the base64 selfie — fetched on demand (the list in /api/state omits selfies). */
+    @GetMapping("/{id}")
+    public Customer get(@PathVariable String id) {
+        return repo.findById(id).orElseThrow(() -> ApiException.notFound("Customer not found."));
+    }
+
     /** Register a customer. Upserts by phone; response tells the UI whether it already existed. */
     @PostMapping
     public Map<String, Object> register(@RequestBody Customer body, @AuthenticationPrincipal AmoghaPrincipal principal) {

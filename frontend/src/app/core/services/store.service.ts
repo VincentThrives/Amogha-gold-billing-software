@@ -116,6 +116,10 @@ export class StoreService {
     await this.sync();
     return res;
   }
+  /** Full customer incl. selfie (the /api/state list omits selfies to stay small). */
+  async getCustomer(id: string): Promise<RegisteredCustomer> {
+    return await firstValueFrom(this.http.get<RegisteredCustomer>(`/api/customers/${encodeURIComponent(id)}`));
+  }
   async addFundRequest(amount: number, note: string) { await firstValueFrom(this.http.post('/api/funds', { amount, note })); await this.sync(); }
   async addAdminFund(amount: number, method: string, note: string) { await firstValueFrom(this.http.post('/api/admin-funds', { amount, method, note })); await this.sync(); }
   async addExpense(amount: number, category: string, reason: string) { await firstValueFrom(this.http.post('/api/expenses', { amount, category, reason })); await this.sync(); }

@@ -155,6 +155,13 @@ export class NewTransactionComponent implements OnInit {
       }
     }
 
+    // The customer's selfie is omitted from /api/state (kept small), so fetch it on
+    // demand to attach it to this bill's KYC record.
+    let selfie: string | null = customer.selfie ?? null;
+    if (!selfie && customer.id) {
+      try { selfie = (await this.store.getCustomer(customer.id))?.selfie ?? null; } catch { /* selfie is optional */ }
+    }
+
     const txn: Txn = {
       id: this.store.genId('txn'),
       billNo: this.store.genBillNo(),
@@ -169,7 +176,7 @@ export class NewTransactionComponent implements OnInit {
       },
       idProofs: customer.idProofs || [],
       reference: customer.reference || {},
-      selfie: customer.selfie ?? null,
+      selfie,
       clientOtpVerified: false,
       article: items[0].article.trim(),
       items: items.map(it => {
