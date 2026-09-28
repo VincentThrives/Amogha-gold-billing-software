@@ -15,4 +15,7 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","app.jar"]
+# On small containers (e.g. Render free tier, 512 MB) the JVM's default max heap
+# is only ~25% of RAM, which OOMs once real data is loaded. Use more of the
+# container's memory for the heap. MaxRAMPercentage adapts to the instance size.
+ENTRYPOINT ["java","-XX:MaxRAMPercentage=70.0","-jar","app.jar"]
