@@ -17,7 +17,9 @@
 .rep-card.silver-c { border-top-color: #9aa3ad; }
 .rep-card.total-c { border-top-color: var(--purple); }
 .rep-metal { font-size: 12.5px; color: var(--muted); font-weight: 600; }
-.rep-grams { font-size: 26px; font-weight: 700; color: var(--purple); margin: 6px 0 2px; }
+.rep-grams { font-size: 26px; font-weight: 700; color: var(--purple); margin: 6px 0 0; }
+.rep-wt-tag { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; vertical-align: middle; }
+.rep-grams-net { font-size: 13.5px; font-weight: 600; color: var(--muted); margin: 0 0 4px; }
 .rep-amt { font-size: 13px; color: var(--muted); }
 .rep-amt b { color: var(--ink); }
 

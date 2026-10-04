@@ -28,12 +28,14 @@
 <div class="report-cards">
   <div class="rep-card gold-c">
     <div class="rep-metal"><i class="fa-solid fa-coins"></i> Gold bought</div>
-    <div class="rep-grams">{{ summary().goldG.toFixed(2) }} g</div>
+    <div class="rep-grams">{{ summary().goldGross.toFixed(2) }} g <span class="rep-wt-tag">gross</span></div>
+    <div class="rep-grams-net">{{ summary().goldG.toFixed(2) }} g net</div>
     <div class="rep-amt">Spent on gold <b>{{ inr0(summary().goldAmt) }}</b></div>
   </div>
   <div class="rep-card silver-c">
     <div class="rep-metal"><i class="fa-solid fa-coins"></i> Silver bought</div>
-    <div class="rep-grams">{{ summary().silverG.toFixed(2) }} g</div>
+    <div class="rep-grams">{{ summary().silverGross.toFixed(2) }} g <span class="rep-wt-tag">gross</span></div>
+    <div class="rep-grams-net">{{ summary().silverG.toFixed(2) }} g net</div>
     <div class="rep-amt">Spent on silver <b>{{ inr0(summary().silverAmt) }}</b></div>
   </div>
   <div class="rep-card total-c">

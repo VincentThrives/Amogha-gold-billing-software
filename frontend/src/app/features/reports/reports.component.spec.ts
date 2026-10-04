@@ -47,8 +47,10 @@ describe('ReportsComponent (admin)', () => {
   it('summarises gold grams/amount, silver grams/amount and total', () => {
     const s = cmp.summary();
     expect(s.goldG).toBeCloseTo(55.11, 2);
+    expect(s.goldGross).toBeCloseTo(55.11, 2);
     expect(s.goldAmt).toBe(100000);
     expect(s.silverG).toBe(50);
+    expect(s.silverGross).toBe(50);
     expect(s.silverAmt).toBe(5000);
     expect(s.total).toBe(105000);
     expect(s.count).toBe(2);

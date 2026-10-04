@@ -49,12 +49,13 @@ export class ReportsComponent {
   });
 
   summary = computed(() => {
-    let goldG = 0, goldAmt = 0, silverG = 0, silverAmt = 0;
+    let goldG = 0, goldGross = 0, goldAmt = 0, silverG = 0, silverGross = 0, silverAmt = 0;
     for (const t of this.rows()) {
-      if (t.metal === 'gold') { goldG += t.totals.netWeight; goldAmt += this.paidOut(t); }
-      else { silverG += t.totals.netWeight; silverAmt += this.paidOut(t); }
+      const gross = (t.items || []).reduce((s, it) => s + (it.gross || 0), 0);
+      if (t.metal === 'gold') { goldG += t.totals.netWeight; goldGross += gross; goldAmt += this.paidOut(t); }
+      else { silverG += t.totals.netWeight; silverGross += gross; silverAmt += this.paidOut(t); }
     }
-    return { goldG, goldAmt, silverG, silverAmt, total: goldAmt + silverAmt, count: this.rows().length };
+    return { goldG, goldGross, goldAmt, silverG, silverGross, silverAmt, total: goldAmt + silverAmt, count: this.rows().length };
   });
 
   company = computed(() => this.store.company());
